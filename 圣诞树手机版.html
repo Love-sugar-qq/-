@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Magical Christmas - Mobile Ready v32</title>
+    <style>
+        /* 禁止手机端橡皮筋滚动和长按选中 */
+        body { 
+            margin: 0; overflow: hidden; background-color: #020202; 
+            font-family: 'Helvetica Neue', sans-serif;
+            touch-action: none; 
+            -webkit-user-select: none; user-select: none;
+            -webkit-touch-callout: none;
+        }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box;
+        }
+        
+        #guide {
+            position: absolute; top: 10%; left: 20px; 
+            color: rgba(255,255,255,0.9); font-size: 13px; line-height: 2.0;
+            text-shadow: 0 0 8px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px;
+            backdrop-filter: blur(5px); border: 1px solid rgba(255,105,180,0.3);
+            pointer-events: auto;
+            max-width: 200px;
+        }
+        
+        #signal-light {
+            display: inline-block; width: 15px; height: 15px; border-radius: 50%;
+            background-color: #555; margin-right: 8px; vertical-align: middle;
+            border: 2px solid #fff; box-shadow: 0 0 8px #000;
+        }
+        .key-point { color: #FFD700; font-weight: bold; }
+        .action { color: #FF69B4; font-weight: bold; }
+
+        #gesture-status {
+            margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3);
+            font-weight: bold; font-size: 14px; color: #fff; display: flex; align-items: center;
+        }
+
+        .controls { pointer-events: auto; text-align: center; margin-bottom: 30px; }
+        .btn-upload {
+            background: linear-gradient(135deg, #FF1493, #FFD700);
+            border: none; color: #fff;
+            padding: 12px 30px; text-transform: uppercase; letter-spacing: 2px; cursor: pointer;
+            transition: all 0.2s; font-size: 14px; border-radius: 50px;
+            box-shadow: 0 5px 20px rgba(255, 20, 147, 0.6);
+            font-weight: bold;
+        }
+        .btn-upload:active { transform: scale(0.95); }
+        #file-input { display: none; }
+
+        #status { position: absolute; bottom: 10px; left: 20px; color: rgba(255,255,255,0.5); font-size: 10px; }
+        #loader {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #020202;
+            display: flex; justify-content: center; align-items: center; z-index: 20; color: #FFD700;
+            flex-direction: column; transition: opacity 1.2s;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 4px solid rgba(255, 215, 0, 0.2); border-top: 4px solid #FFD700; border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #input_video { position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <div style="letter-spacing: 2px; text-transform: uppercase; font-size: 14px; font-weight:bold;">✨ Loading Mobile ✨</div>
+    </div>
+
+    <video id="input_video" autoplay playsinline></video>
+
+    <div id="ui-layer">
+        <div class="header"></div>
+        <div id="guide">
+            <div style="margin-bottom:8px; font-size: 16px; color:#fff; border-bottom:1px solid rgba(255,255,255,0.3); padding-bottom:5px;">🎮 <b>操作指南</b></div>
+            
+            <div style="margin-bottom:8px;">👆 <b>触摸模式 (推荐)</b></div>
+            <div style="color:#aaa; font-size:12px;">点击屏幕任意处：<br>抽取 / 关闭照片</div>
+            <br>
+            <div style="margin-bottom:8px;">👋 <b>手势模式 (需支架)</b></div>
+            <div>- ✊ 握拳: 抽取 (HUD)</div>
+            <div>- 🖐 张开: 关闭/散开</div>
+            
+            <div id="gesture-status">
+                <span id="signal-light"></span>
+                <span id="status-text">Ready</span>
+            </div>
+        </div>
+        
+        <div id="status">Mobile System Ready</div>
+        
+        <div class="controls">
+            <button class="btn-upload" onclick="document.getElementById('file-input').click()">+ 导入照片 (60)</button>
+            <input type="file" id="file-input" accept="image/*" multiple onchange="handlePhotoUpload(this)">
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <script>
+        // --- 0. FAILSAFE ---
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                if(loader && loader.style.display !== 'none') {
+                    loader.style.opacity = 0; setTimeout(() => loader.style.display = 'none', 1000);
+                }
+            }, 3000); 
+        });
+
+        // --- 1. CONFIGURATION (Mobile Optimized) ---
+        const isMobile = window.innerWidth < 768; // Simple check
+
+        const config = {
+            // Halve the particle count for mobile to ensure smooth FPS
+            decoCount: isMobile ? 600 : 1200, 
+            treeDustCount: isMobile ? 800 : 2000, 
+            rootDustCount: isMobile ? 200 : 600,
+            orbitDustCount: isMobile ? 500 : 1200, 
+            bgDustCount: isMobile ? 600 : 1500, 
+            heartCount: isMobile ? 40 : 80,
+            photoCount: 60, 
+            
+            photoBrightness: 0xdddddd, 
+            hudPhotoBrightness: 0x888888, // Darker for HUD to avoid exposure
+            
+            topText: "晴晴圣诞节快乐！",
+            bgTexts: ["最爱晴晴", "天秤座&&水瓶座", "可爱的宝宝", "爱你一生一世", "I LOVE YOU", "3.19", "2.10", "10.18", "我们一直在一起", "一直到结婚"],
+            colors: {
+                gold: 0xFFE55C, red: 0xFF3355, greenD: 0x1a5e35, greenL: 0x52a86e,
+                pink: 0xFF88C2, purple: 0xB090FF, blue: 0x33CCFF, yellow: 0xFFFF66,
+                libraGold: 0xFFE55C, aquaBlue: 0x33CCFF
+            },
+            treeHeight: 80, 
+            treeRadius: isMobile ? 25 : 35, // Slimmer tree on mobile
+            scatterRadius: 110
+        };
+
+        const state = {
+            mode: 'TREE', 
+            isInspecting: false,
+            leftHandPinching: false, lastHandPos: { x: 0, y: 0 },
+            unviewedPhotos: [], 
+            isGrabLocked: false,
+            album: [], 
+            uploadIndex: 0
+        };
+
+        function resetDeck() {
+            state.unviewedPhotos = Array.from({length: config.photoCount}, (_, i) => i);
+            for (let i = state.unviewedPhotos.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [state.unviewedPhotos[i], state.unviewedPhotos[j]] = [state.unviewedPhotos[j], state.unviewedPhotos[i]];
+            }
+        }
+        resetDeck();
+
+        // --- 2. THREE.JS SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x020202, 0.003);
+
+        // Adjust FOV for Mobile (Portrait Mode needs wider vertical FOV)
+        const camera = new THREE.PerspectiveCamera(isMobile ? 80 : 60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // Move camera back further on mobile to fit the whole tree
+        camera.position.set(0, 15, isMobile ? 180 : 140);
+        camera.lookAt(0,0,0);
+        scene.add(camera);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio for performance
+        renderer.toneMapping = THREE.ReinhardToneMapping; 
+        renderer.toneMappingExposure = 1.5;
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const mainLight = new THREE.PointLight(config.colors.gold, 2.0, 300);
+        mainLight.position.set(20, 60, 40);
+        scene.add(mainLight);
+        const secondaryLight = new THREE.PointLight(config.colors.pink, 1.5, 300);
+        secondaryLight.position.set(-30, 20, -40);
+        scene.add(secondaryLight);
+
+        // Bloom
+        const renderScene = new THREE.RenderPass(scene, camera);
+        const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+        bloomPass.threshold = 0.15; 
+        bloomPass.strength = 1.5;   
+        bloomPass.radius = 0.7;
+        const composer = new THREE.EffectComposer(renderer);
+        composer.addPass(renderScene);
+        composer.addPass(bloomPass);
+
+        // --- 3. GROUPS ---
+        const mainGroup = new THREE.Group(); scene.add(mainGroup); 
+        const staticGroup = new THREE.Group(); scene.add(staticGroup); 
+        const orbitGroup = new THREE.Group(); scene.add(orbitGroup);
+        const heartGroup = new THREE.Group(); staticGroup.add(heartGroup);
+        const constellationGroup = new THREE.Group(); staticGroup.add(constellationGroup);
+
+        // --- 4. HUD SYSTEM ---
+        const hudGroup = new THREE.Group();
+        camera.add(hudGroup);
+        
+        // 4.1 Photo Plane
+        const hudGeometry = new THREE.PlaneGeometry(12, 16); 
+        const hudMaterial = new THREE.MeshBasicMaterial({ 
+            color: config.hudPhotoBrightness, 
+            side: THREE.DoubleSide, 
+            transparent: false, depthTest: false, depthWrite: false
+        });
+        const hudMesh = new THREE.Mesh(hudGeometry, hudMaterial);
+        hudMesh.position.set(0, 0, -15); hudMesh.renderOrder = 9999; hudGroup.add(hudMesh);
+        hudGroup.visible = false;
+
+        // 4.2 Border
+        const borderGeo = new THREE.PlaneGeometry(12.5, 16.5);
+        const brightGold = new THREE.Color(0xFFD700).multiplyScalar(2.0); 
+        const borderMat = new THREE.MeshBasicMaterial({ 
+            color: brightGold, side: THREE.DoubleSide, depthTest:false, depthWrite:false 
+        });
+        const borderMesh = new THREE.Mesh(borderGeo, borderMat);
+        borderMesh.position.set(0, 0, -15.1); borderMesh.renderOrder = 9998; hudGroup.add(borderMesh);
+
+        // --- 5. ASSETS & PARTICLES ---
+        const geoSphere = new THREE.IcosahedronGeometry(0.8, 1);
+        const geoBox = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+        const geoTorus = new THREE.TorusGeometry(0.7, 0.25, 12, 24);
+        const geoDust = new THREE.TetrahedronGeometry(0.3, 0);
+
+        const matGold = new THREE.MeshStandardMaterial({ color: config.colors.gold, roughness: 0.1, metalness: 1.0, emissive: 0x554400, emissiveIntensity: 1.2 });
+        const matRed = new THREE.MeshStandardMaterial({ color: config.colors.red, roughness: 0.15, metalness: 0.8, emissive: 0x660000, emissiveIntensity: 1.0 });
+        const matGreenD = new THREE.MeshStandardMaterial({ color: config.colors.greenD, roughness: 0.4, metalness: 0.3 });
+        const matGreenL = new THREE.MeshStandardMaterial({ color: config.colors.greenL, roughness: 0.3, metalness: 0.4 });
+        const matDustGold = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8 });
+        
+        const particles = [];
+        const photoParticles = []; 
+        const bgTextPositions = [];
+
+        // Utils
+        function getTreePos(i, total, radiusMod = 1, heightMod = 1, hOffset = 0) {
+            const h = config.treeHeight * heightMod;
+            const y = (i / total) * h - (h/2) + hOffset;
+            const progress = (y - hOffset + h/2) / h;
+            const r = (1 - progress) * config.treeRadius * radiusMod + 1;
+            const angle = i * 0.5;
+            return new THREE.Vector3(Math.cos(angle)*r, y, Math.sin(angle)*r);
+        }
+        function getScatterPos(radius = config.scatterRadius) {
+            const u = Math.random(); const v = Math.random();
+            const theta = 2 * Math.PI * u; const phi = Math.acos(2 * v - 1);
+            const r = radius * (0.4 + Math.random() * 0.8);
+            return new THREE.Vector3(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
+        }
+        function getDeepBackgroundPos(minDist = 40) {
+            let pos, tooClose;
+            let attempts = 0;
+            do {
+                pos = new THREE.Vector3((Math.random()-0.5)*280, (Math.random()-0.5)*160+20, -80-Math.random()*150);
+                tooClose = bgTextPositions.some(existingPos => existingPos.distanceTo(pos) < minDist);
+                attempts++;
+            } while (tooClose && attempts < 50);
+            bgTextPositions.push(pos);
+            return pos;
+        }
+        
+        function getCircleTexture() {
+            const canvas = document.createElement('canvas'); canvas.width = 32; canvas.height = 32;
+            const context = canvas.getContext('2d');
+            const gradient = context.createRadialGradient(16, 16, 0, 16, 16, 16);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.4, 'rgba(255,255,255,0.5)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0)');
+            context.fillStyle = gradient; context.fillRect(0,0,32,32);
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+        const circleTex = getCircleTexture();
+
+        // --- 6. POPULATE SCENE ---
+        
+        // Text Particles (Static Group)
+        (function createTopTextParticles() {
+            const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.font = 'bold 90px "Times New Roman", serif'; 
+            ctx.fillStyle = 'white'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(config.topText, canvas.width / 2, canvas.height / 2);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+             for (let y = 0; y < canvas.height; y += 3) {
+                for (let x = 0; x < canvas.width; x += 3) {
+                    if (data[(y * canvas.width + x) * 4 + 3] > 128) {
+                        const mesh = new THREE.Sprite(new THREE.SpriteMaterial({
+                            map: circleTex, color: config.colors.gold, transparent: true, blending: THREE.AdditiveBlending
+                        }));
+                        mesh.scale.set(0.8, 0.8, 0.8);
+                        
+                        const jX = (Math.random()-0.5)*0.5; const jY = (Math.random()-0.5)*0.5; const jZ = (Math.random()-0.5)*2.0;
+                        const pX = (x - canvas.width / 2) * 0.12 + jX;
+                        const pY = (canvas.height / 2 - y) * 0.12 + 65 + jY;
+                        const pZ = Math.sin(x * 0.02) * 3 - 10 + jZ;
+
+                        const treePos = new THREE.Vector3(pX, pY, pZ);
+                        const scatterPos = getScatterPos(140);
+                        
+                        mesh.position.copy(treePos);
+                        staticGroup.add(mesh); // Fix: Title doesn't rotate
+                        particles.push({mesh, treePos, scatterPos, type:'text', originalScale:new THREE.Vector3(0.8,0.8,0.8)});
+                    }
+                }
+            }
+        })();
+
+        // Tree & Dust
+        for(let i=0; i<config.decoCount; i++) {
+            let mesh; const r=Math.random();
+            if(r>0.85) mesh=new THREE.Mesh(geoBox, matGold);
+            else if(r>0.7) mesh=new THREE.Mesh(geoTorus, matRed);
+            else if(r>0.4) mesh=new THREE.Mesh(geoSphere, matGreenD);
+            else mesh=new THREE.Mesh(geoSphere, matGreenL);
+            const treePos=getTreePos(i, config.decoCount);
+            treePos.x+=(Math.random()-0.5)*3; treePos.z+=(Math.random()-0.5)*3;
+            mesh.position.copy(treePos); mesh.scale.setScalar(Math.random()*0.7+0.6);
+            mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
+            mainGroup.add(mesh);
+            particles.push({mesh, treePos, scatterPos:getScatterPos(), type:'deco', originalScale:mesh.scale.clone()});
+        }
+        for(let i=0; i<config.treeDustCount; i++) {
+            const mesh=new THREE.Mesh(geoDust, matDustGold);
+            const treePos=getTreePos(i, config.treeDustCount, 0.9, 1.05); 
+            treePos.x+=(Math.random()-0.5)*4; treePos.y+=(Math.random()-0.5)*2; treePos.z+=(Math.random()-0.5)*4;
+            mesh.position.copy(treePos); mesh.scale.setScalar(Math.random()*0.5+0.2); mainGroup.add(mesh);
+            particles.push({mesh, treePos, scatterPos:getScatterPos(120), type:'dust', originalScale:mesh.scale.clone()});
+        }
+        
+        // Orbit & BG
+        const orbitGeoSys=new THREE.BufferGeometry(); const orbitPosArr=[]; const orbitColArr=[];
+        const orbitColors=[new THREE.Color(config.colors.gold), new THREE.Color(config.colors.pink), new THREE.Color(config.colors.blue)];
+        for(let i=0; i<config.orbitDustCount; i++) {
+            const r=config.treeRadius*(1.2+Math.random()*0.8);
+            const angle=Math.random()*Math.PI*2;
+            const y=(Math.random()-0.5)*config.treeHeight*1.5;
+            orbitPosArr.push(r*Math.cos(angle), y, r*Math.sin(angle));
+            const c=orbitColors[Math.floor(Math.random()*orbitColors.length)];
+            orbitColArr.push(c.r*1.5, c.g*1.5, c.b*1.5);
+        }
+        orbitGeoSys.setAttribute('position', new THREE.Float32BufferAttribute(orbitPosArr, 3));
+        orbitGeoSys.setAttribute('color', new THREE.Float32BufferAttribute(orbitColArr, 3));
+        orbitGroup.add(new THREE.Points(orbitGeoSys, new THREE.PointsMaterial({size:1.2, vertexColors:true, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending})));
+
+        const bgGeo=new THREE.BufferGeometry(); const bgPos=[]; const bgCols=[];
+        const bgBaseCols=[new THREE.Color(config.colors.pink), new THREE.Color(config.colors.purple), new THREE.Color(config.colors.blue)];
+        for(let i=0; i<config.bgDustCount; i++) {
+            const p=getDeepBackgroundPos(5); bgPos.push(p.x, p.y, p.z);
+            const c=bgBaseCols[Math.floor(Math.random()*bgBaseCols.length)];
+            bgCols.push(c.r*1.3, c.g*1.3, c.b*1.3);
+        }
+        bgGeo.setAttribute('position', new THREE.Float32BufferAttribute(bgPos, 3));
+        bgGeo.setAttribute('color', new THREE.Float32BufferAttribute(bgCols, 3));
+        scene.add(new THREE.Points(bgGeo, new THREE.PointsMaterial({size:1.0, vertexColors:true, transparent:true, opacity:0.6, blending:THREE.AdditiveBlending})));
+
+        const topStar=new THREE.Mesh(new THREE.OctahedronGeometry(4, 0), new THREE.MeshStandardMaterial({color:0xFFFDD0, emissive:0xAAAA00, metalness:1.0, roughness:0.1}));
+        topStar.position.set(0, config.treeHeight/2+5, 0); mainGroup.add(topStar); topStar.add(new THREE.PointLight(0xFFD700, 3, 100));
+
+        // Texts & Shapes
+        function createTextTexture(text, color) {
+            const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=128;
+            const ctx=canvas.getContext('2d');
+            ctx.font='bold 50px "Microsoft YaHei", Arial';
+            ctx.fillStyle=color; ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.shadowColor=color; ctx.shadowBlur=25; 
+            ctx.fillText(text, canvas.width/2, canvas.height/2);
+            return new THREE.CanvasTexture(canvas);
+        }
+        config.bgTexts.forEach(text => {
+            const tex=createTextTexture(text, '#FF88C2');
+            const mat=new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending, depthWrite:false});
+            const geo=new THREE.PlaneGeometry(40, 10); const mesh=new THREE.Mesh(geo, mat);
+            mesh.position.copy(getDeepBackgroundPos(50)); mesh.lookAt(camera.position); staticGroup.add(mesh);
+        });
+        const heartShape=new THREE.Shape();
+        heartShape.moveTo(25, 25); heartShape.bezierCurveTo(25, 25, 20, 0, 0, 0); heartShape.bezierCurveTo(-30, 0, -30, 35, -30, 35);
+        heartShape.bezierCurveTo(-30, 55, -10, 77, 25, 95); heartShape.bezierCurveTo(60, 77, 80, 55, 80, 35);
+        heartShape.bezierCurveTo(80, 35, 80, 0, 50, 0); heartShape.bezierCurveTo(35, 0, 25, 25, 25, 25);
+        const heartGeo=new THREE.ShapeGeometry(heartShape);
+        const heartMat=new THREE.MeshBasicMaterial({color:new THREE.Color(config.colors.yellow).multiplyScalar(1.2), transparent:true, opacity:0.7, blending: THREE.AdditiveBlending});
+        for(let i=0; i<config.heartCount; i++) {
+            const mesh=new THREE.Mesh(heartGeo, heartMat);
+            mesh.position.copy(getDeepBackgroundPos(20)); mesh.scale.setScalar(0.02+Math.random()*0.02);
+            mesh.rotation.z=(Math.random()-0.5)*0.5; heartGroup.add(mesh);
+            mesh.userData.baseScale=mesh.scale.x; mesh.userData.pulseOffset=Math.random()*Math.PI*2;
+        }
+        function createConstellation(stars, connections, colorHex, position) {
+            const group=new THREE.Group(); group.position.copy(position);
+            const starGeo=new THREE.BufferGeometry(); const starPos=[]; stars.forEach(s=>starPos.push(s.x, s.y, s.z));
+            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+            const brightColor = new THREE.Color(colorHex).multiplyScalar(1.5);
+            group.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color:brightColor, size:1.8, transparent:true, opacity:1.0, blending:THREE.AdditiveBlending})));
+            const lineMat=new THREE.LineBasicMaterial({color:brightColor, transparent:true, opacity:0.6, blending:THREE.AdditiveBlending});
+            connections.forEach(pair => { group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([stars[pair[0]], stars[pair[1]]]), lineMat)); });
+            group.userData.floatOffset=Math.random()*Math.PI*2; group.userData.floatSpeed=0.2+Math.random()*0.3;
+            constellationGroup.add(group);
+        }
+        const libraStars=[new THREE.Vector3(0, 10, 0), new THREE.Vector3(-8, 2, 0), new THREE.Vector3(8, 2, 0), new THREE.Vector3(-5, -8, 0), new THREE.Vector3(5, -8, 0)];
+        const libraConns=[[0,1], [0,2], [1,3], [2,4], [1,2]];
+        createConstellation(libraStars, libraConns, config.colors.libraGold, getDeepBackgroundPos(60));
+        const aquaStars=[new THREE.Vector3(0, 12, 0), new THREE.Vector3(-4, 8, 0), new THREE.Vector3(4, 8, 0), new THREE.Vector3(0, 2, 0), new THREE.Vector3(-6, -4, 0), new THREE.Vector3(6, -4, 0), new THREE.Vector3(-2, -8, 0), new THREE.Vector3(2, -10, 0), new THREE.Vector3(-3, -14, 0), new THREE.Vector3(1, -16, 0)];
+        const aquaConns=[[0,1], [0,2], [1,3], [2,3], [3,4], [3,5], [4,6], [6,7], [7,8], [8,9]];
+        createConstellation(aquaStars, aquaConns, config.colors.aquaBlue, getDeepBackgroundPos(60));
+
+        // --- PHOTOS ---
+        function createPlaceholderTexture(index) {
+            const cvs=document.createElement('canvas'); cvs.width=300; cvs.height=400; const cx=cvs.getContext('2d');
+            const hue=(index*360/config.photoCount)%360; const grad=cx.createLinearGradient(0,0,300,400);
+            grad.addColorStop(0, `hsla(${hue}, 50%, 30%, 1)`); grad.addColorStop(1, `hsla(${hue+30}, 50%, 20%, 1)`);
+            cx.fillStyle=grad; cx.fillRect(0,0,300,400);
+            cx.strokeStyle='rgba(255,255,255,0.3)'; cx.lineWidth=3; cx.strokeRect(10,10,280,380);
+            cx.fillStyle='rgba(255,255,255,0.8)'; cx.font='bold 40px Arial'; cx.textAlign='center';
+            cx.fillText('Photo '+ (index+1), 150, 200); cx.font='20px Arial'; cx.fillText('Waiting...', 150, 240);
+            return new THREE.CanvasTexture(cvs);
+        }
+        const photoGeo=new THREE.PlaneGeometry(6, 8);
+        for(let i=0; i<config.photoCount; i++) {
+            const tex=createPlaceholderTexture(i);
+            state.album.push(tex); 
+            // Use bright config.photoBrightness for Tree
+            const mat=new THREE.MeshBasicMaterial({color:config.photoBrightness, side:THREE.DoubleSide, map:tex});
+            const mesh=new THREE.Mesh(photoGeo, mat);
+            const indexInTree=Math.floor((i/config.photoCount)*config.decoCount);
+            const treePos=getTreePos(indexInTree, config.decoCount, 1.4, 0.9);
+            mesh.position.copy(treePos); mainGroup.add(mesh);
+            const pObj={mesh, treePos, scatterPos:getScatterPos(), isPhoto:true, originalScale:new THREE.Vector3(1,1,1), id:i};
+            particles.push(pObj); photoParticles.push(pObj);
+        }
+
+        // --- 7. HUD & LOGIC ---
+        function transitionTo(newState) {
+            if(state.mode === newState) return;
+            state.mode = newState;
+            particles.forEach(p => {
+                let target = (newState === 'TREE') ? p.treePos : p.scatterPos;
+                const dur = 1.5 + Math.random()*0.8;
+                gsap.to(p.mesh.position, { x: target.x, y: target.y, z: target.z, duration: dur, ease: "power3.inOut" });
+                if(p.type === 'text') {
+                    if(newState !== 'TREE') gsap.to(p.mesh.lookAt, { duration: 1 });
+                    else gsap.to(p.mesh.rotation, {x:0, y:0, z:0, duration: 1});
+                }
+            });
+        }
+
+        function showRandomPhoto() {
+            if(state.isInspecting) return;
+            if(state.unviewedPhotos.length === 0) resetDeck();
+            
+            const nextId = state.unviewedPhotos.pop();
+            const tex = state.album[nextId];
+            
+            if(tex) {
+                hudMesh.material.map = tex;
+                // FIX: Use dark brightness for HUD
+                hudMesh.material.color.setHex(config.hudPhotoBrightness); 
+                hudMesh.material.needsUpdate = true;
+            }
+
+            state.isInspecting = true;
+            hudGroup.visible = true;
+            hudGroup.scale.set(0.1, 0.1, 0.1);
+            gsap.to(hudGroup.scale, { x: 1, y: 1, z: 1, duration: 0.6, ease: "back.out(1.7)" });
+        }
+
+        function closePhoto() {
+            if(!state.isInspecting) return;
+            state.isInspecting = false;
+            gsap.to(hudGroup.scale, { 
+                x: 0.1, y: 0.1, z: 0.1, duration: 0.3, 
+                onComplete: () => { hudGroup.visible = false; } 
+            });
+        }
+
+        // --- 8. MEDIAPIPE ---
+        const debugStatus = document.getElementById('status-text');
+        const debugLight = document.getElementById('signal-light');
+
+        function updateDebug(status, color) {
+            debugStatus.innerText = status;
+            debugStatus.style.color = color;
+            debugLight.style.backgroundColor = color;
+        }
+
+        function onResults(results) {
+            const loader = document.getElementById('loader');
+            if(loader.style.display !== 'none') { loader.style.opacity = 0; setTimeout(() => loader.style.display = 'none', 1000); }
+            
+            let rightHand = null, leftHand = null;
+            if (results.multiHandLandmarks) {
+                for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                    const label = results.multiHandedness[i].label;
+                    if(label === 'Right') rightHand = results.multiHandLandmarks[i];
+                    if(label === 'Left') leftHand = results.multiHandLandmarks[i];
+                }
+            }
+
+            // RIGHT HAND
+            if (rightHand) {
+                const wrist = rightHand[0]; let extended = 0;
+                [8,12,16,20].forEach(i => {
+                    const tip = rightHand[i]; 
+                    if(Math.sqrt(Math.pow(tip.x-wrist.x,2)+Math.pow(tip.y-wrist.y,2)) > 0.15) extended++;
+                });
+                if (extended <= 1) transitionTo('TREE');
+                else if (extended >= 4) transitionTo('SCATTER');
+            }
+
+            // LEFT HAND
+            if (leftHand) {
+                const wrist = leftHand[0]; 
+                const indexTip = leftHand[8]; const thumbTip = leftHand[4];
+                let foldedCount = 0;
+                [12, 16, 20].forEach(i => {
+                    const tip = leftHand[i]; 
+                    if(Math.sqrt(Math.pow(tip.x-leftHand[0].x,2)+Math.pow(tip.y-leftHand[0].y,2)) < 0.15) foldedCount++;
+                });
+                const isFist = foldedCount >= 3; 
+                const pinchDist = Math.sqrt(Math.pow(indexTip.x - thumbTip.x, 2) + Math.pow(indexTip.y - thumbTip.y, 2));
+                const isPinching = (pinchDist < 0.05) && (foldedCount < 2);
+                let extendedCount = 0;
+                [8,12,16,20].forEach(i => {
+                    const tip = leftHand[i]; 
+                    if(Math.sqrt(Math.pow(tip.x-leftHand[0].x,2)+Math.pow(tip.y-leftHand[0].y,2)) > 0.15) extendedCount++;
+                });
+                const isOpen = extendedCount >= 4;
+
+                if (isFist) {
+                    updateDebug("握拳: 抽取惊喜!", "#00FF00"); 
+                    state.leftHandPinching = false;
+                    if (!state.isInspecting && !state.isGrabLocked) {
+                        state.isGrabLocked = true;
+                        showRandomPhoto();
+                        setTimeout(() => state.isGrabLocked = false, 1500);
+                    }
+                } 
+                else if (isPinching) {
+                    updateDebug("捏合: 旋转星空", "#00FFFF"); 
+                    if (state.mode === 'SCATTER') {
+                        if (!state.leftHandPinching) {
+                            state.leftHandPinching = true;
+                            state.lastHandPos = { x: indexTip.x, y: indexTip.y };
+                        } else {
+                            const dx = indexTip.x - state.lastHandPos.x;
+                            const dy = indexTip.y - state.lastHandPos.y;
+                            mainGroup.rotation.y += dx * 5.0;
+                            mainGroup.rotation.x += dy * 5.0;
+                            state.lastHandPos = { x: indexTip.x, y: indexTip.y };
+                        }
+                    }
+                } 
+                else if (isOpen) {
+                    updateDebug("张开: 关闭照片", "#FFFFFF"); 
+                    state.leftHandPinching = false;
+                    if (state.isInspecting && !state.isGrabLocked) {
+                        closePhoto();
+                    }
+                } else {
+                    updateDebug("...", "#555");
+                    state.leftHandPinching = false;
+                }
+            } else {
+                updateDebug("等待左手...", "#555");
+            }
+        }
+
+        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+        hands.onResults(onResults);
+
+        const video = document.getElementById('input_video');
+        const cameraUtils = new Camera(video, {
+            onFrame: async () => { await hands.send({image: video}); },
+            width: isMobile ? 360 : 640, height: isMobile ? 240 : 480,
+            facingMode: 'user'
+        });
+        cameraUtils.start().catch(e => { console.error(e); alert("Camera Error: HTTPS required."); });
+
+        // --- 9. LOOP ---
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            if (state.mode !== 'TREE' && !state.leftHandPinching) mainGroup.rotation.y += 0.001;
+            else if (state.mode === 'TREE') { mainGroup.rotation.y = time * 0.2; mainGroup.rotation.x = 0; }
+
+            orbitGroup.rotation.y = time * -0.1; orbitGroup.rotation.z = Math.sin(time*0.5) * 0.05;
+            topStar.rotation.y = time * 1.5;
+            
+            heartGroup.children.forEach(h => {
+                const scale = h.userData.baseScale * (1 + Math.sin(time * 3 + h.userData.pulseOffset) * 0.2);
+                h.scale.setScalar(scale);
+            });
+            constellationGroup.children.forEach(c => {
+                 c.position.y += Math.sin(time * c.userData.floatSpeed + c.userData.floatOffset) * 0.05;
+            });
+
+            photoParticles.forEach(p => { p.mesh.lookAt(camera.position); });
+            particles.forEach(p => { 
+                if(p.type === 'dust') p.mesh.scale.multiplyScalar(1 + Math.sin(time * 5 + p.treePos.x)*0.005); 
+            });
+
+            composer.render();
+        }
+
+        // Touch Support
+        document.addEventListener('touchstart', (e) => {
+            if (!state.isGrabLocked) {
+                if (!state.isInspecting) {
+                    state.isGrabLocked = true; showRandomPhoto(); setTimeout(() => state.isGrabLocked = false, 1000);
+                } else {
+                    state.isGrabLocked = true; closePhoto(); setTimeout(() => state.isGrabLocked = false, 1000);
+                }
+            }
+        }, { passive: false });
+
+        window.handlePhotoUpload = (input) => {
+            if(!input.files.length) return;
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const tex = new THREE.TextureLoader().load(e.target.result);
+                    tex.encoding = THREE.sRGBEncoding;
+                    state.album[state.uploadIndex % config.photoCount] = tex;
+                    const slot = photoParticles[state.uploadIndex % config.photoCount];
+                    if(slot && slot.mesh) {
+                        slot.mesh.material.map = tex; 
+                        slot.mesh.material.needsUpdate = true;
+                        slot.mesh.material.color.setHex(config.photoBrightness); 
+                    }
+                    state.uploadIndex++;
+                };
+                reader.readAsDataURL(file);
+            });
+            alert("🎉 照片已加载！");
+        };
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
