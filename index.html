@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Magical Christmas - Lite v36</title>
+    <title>Magical Christmas - 360° Free View v35</title>
     <style>
-        /* 基础设置：禁止滚动，纯黑背景 */
+        /* 禁止所有默认触摸行为 */
         body { 
             margin: 0; overflow: hidden; background-color: #020202; 
             font-family: 'Helvetica Neue', sans-serif;
-            touch-action: none; /* 关键：禁止浏览器默认触摸行为 */
+            touch-action: none; 
             -webkit-user-select: none; user-select: none;
             -webkit-touch-callout: none;
         }
@@ -17,63 +17,49 @@
         
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;
-            display: flex; flex-direction: column; justify-content: space-between; padding: 10px; box-sizing: border-box;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 15px; box-sizing: border-box;
         }
         
-        /* --- 顶部功能栏 --- */
         .top-bar {
             display: flex; justify-content: space-between; align-items: flex-start; pointer-events: auto;
         }
 
-        /* 极简模式切换器 */
         .mode-switch {
-            display: flex; gap: 5px; 
-            background: rgba(0,0,0,0.3); padding: 4px; border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px; padding: 5px; display: flex; gap: 5px;
         }
         .mode-btn {
-            background: transparent; border: none; color: #666;
-            padding: 6px 10px; font-size: 10px; font-weight: bold;
-            border-radius: 8px; cursor: pointer; transition: all 0.2s;
+            background: transparent; border: none; color: #aaa;
+            padding: 8px 12px; font-size: 12px; font-weight: bold;
+            border-radius: 15px; cursor: pointer; transition: all 0.3s;
         }
         .mode-btn.active {
-            background: #FF1493; color: white;
+            background: #FF1493; color: white; box-shadow: 0 2px 10px rgba(255,20,147,0.4);
         }
 
-        /* --- 极简左上角提示框 (Micro Guide) --- */
         #guide {
-            position: absolute; 
-            top: 50px; left: 10px; /* 固定左上角 */
-            width: 120px;
-            color: rgba(255,255,255,0.7); 
-            font-size: 10px; 
-            line-height: 1.5;
-            background: rgba(0,0,0,0.2); /* 极淡背景 */
-            padding: 8px; 
-            border-radius: 8px;
-            border-left: 2px solid #FFD700; /* 金色左边框装饰 */
-            pointer-events: none;
+            margin-top: 10px;
+            color: rgba(255,255,255,0.8); font-size: 12px; line-height: 1.6;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px;
+            pointer-events: none; 
+            max-width: 200px;
         }
-        .guide-item { margin-bottom: 3px; }
-        .key { color: #FFD700; font-weight: bold; }
-
-        /* 底部控制栏 */
-        .controls { pointer-events: auto; text-align: center; margin-bottom: 20px; display: flex; justify-content: center; gap: 10px; }
+        .key-point { color: #FFD700; font-weight: bold; }
+        
+        .controls { pointer-events: auto; text-align: center; margin-bottom: 20px; }
         .btn-main {
             background: linear-gradient(135deg, #FF1493, #FFD700);
             border: none; color: #fff;
-            padding: 10px 20px; 
+            padding: 12px 25px; margin: 0 5px;
             text-transform: uppercase; font-size: 12px; border-radius: 50px;
-            box-shadow: 0 4px 15px rgba(255, 20, 147, 0.4); font-weight: bold;
-        }
-        .btn-sub {
-            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
-            color: #ccc; padding: 10px 15px; font-size: 12px; border-radius: 50px;
-            backdrop-filter: blur(5px);
+            box-shadow: 0 5px 15px rgba(255, 20, 147, 0.5); font-weight: bold;
         }
         #file-input { display: none; }
 
-        #status { position: absolute; bottom: 5px; left: 10px; color: rgba(255,255,255,0.2); font-size: 9px; }
+        #status { position: absolute; bottom: 5px; left: 10px; color: rgba(255,255,255,0.3); font-size: 10px; }
         
         #loader {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #020202;
@@ -81,19 +67,19 @@
             flex-direction: column; transition: opacity 1.2s;
         }
         .spinner {
-            width: 30px; height: 30px; border: 2px solid rgba(255, 215, 0, 0.2); border-top: 2px solid #FFD700; border-radius: 50%;
-            animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; margin-bottom: 10px;
+            width: 40px; height: 40px; border: 3px solid rgba(255, 215, 0, 0.2); border-top: 3px solid #FFD700; border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; margin-bottom: 15px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        #input_video { position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none; display: none; }
+        #input_video { position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none; }
     </style>
 </head>
 <body>
 
     <div id="loader">
         <div class="spinner"></div>
-        <div style="font-size: 10px; letter-spacing: 2px; opacity: 0.8;">LITE MODE</div>
+        <div style="font-size: 12px; font-weight:bold; letter-spacing: 2px;">LOADING 360°...</div>
     </div>
 
     <video id="input_video" autoplay playsinline></video>
@@ -101,26 +87,32 @@
     <div id="ui-layer">
         <div class="top-bar">
             <div class="mode-switch">
-                <button class="mode-btn active" id="btn-touch" onclick="setMode('TOUCH')">👆 触屏 (流畅)</button>
-                <button class="mode-btn" id="btn-hands" onclick="setMode('HANDS')">📷 手势 (耗电)</button>
+                <button class="mode-btn active" onclick="setMode('TOUCH')">👆 360°触屏</button>
+                <button class="mode-btn" onclick="setMode('HANDS')">👋 手势版</button>
             </div>
         </div>
 
         <div id="guide">
-            <div class="guide-item"><span class="key">👆 单指拖动</span><br>360° 全视角旋转</div>
-            <div class="guide-item"><span class="key">✌️ 双击屏幕</span><br>散开 / 聚拢</div>
-            <div class="guide-item"><span class="key">🤏 双指捏合</span><br>缩放 / 聚拢</div>
-            <div class="guide-item"><span class="key">👋 摇一摇</span><br>随机抽取照片</div>
-            <div class="guide-item" style="margin-top:5px; color:#aaa;">点击照片查看大图</div>
+            <div id="guide-touch">
+                <div>☝️ <b>单指拖动</b>: XYZ 360°旋转</div>
+                <div>✌️ <b>双击屏幕</b>: 散开星空</div>
+                <div>🤏 <b>双指捏合</b>: 聚拢成树</div>
+                <div>👆 <b>点击图片</b>: 放大查看</div>
+                <div>👋 <b>摇一摇</b>: 随机抽取</div>
+            </div>
+            <div id="guide-hands" style="display:none;">
+                <div>✊ <b>握拳</b>: 抽取 / 聚拢</div>
+                <div>🖐 <b>张开</b>: 关闭 / 散开</div>
+            </div>
         </div>
         
         <div class="controls">
             <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 导入照片</button>
-            <button class="btn-sub" id="btn-shake" style="display:none;" onclick="requestMotion()">⚡ 开启摇一摇</button>
+            <button class="btn-main" id="btn-ios-shake" style="background:#444; display:none;" onclick="requestMotion()">开启摇一摇</button>
             <input type="file" id="file-input" accept="image/*" multiple onchange="handlePhotoUpload(this)">
         </div>
         
-        <div id="status">v36.0 High Performance</div>
+        <div id="status">v35.0 Full 360° Rotation</div>
     </div>
 
     <div id="canvas-container"></div>
@@ -144,32 +136,27 @@
             setTimeout(() => {
                 const loader = document.getElementById('loader');
                 if(loader && loader.style.display !== 'none') {
-                    loader.style.opacity = 0; setTimeout(() => loader.style.display = 'none', 500);
+                    loader.style.opacity = 0; setTimeout(() => loader.style.display = 'none', 1000);
                 }
-            }, 1500); // Faster load for lite mode
+            }, 2500); 
             
-            // Check for iOS/Android Motion Permissions
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                document.getElementById('btn-shake').style.display = 'block';
+                document.getElementById('btn-ios-shake').style.display = 'inline-block';
             }
         });
 
-        // --- 1. CONFIGURATION (Performance Tuned) ---
+        // --- 1. CONFIGURATION ---
         const isMobile = window.innerWidth < 768; 
-
         const config = {
-            // Keep particle count moderate for stability
-            decoCount: isMobile ? 500 : 1200, 
-            treeDustCount: isMobile ? 600 : 2000, 
+            decoCount: isMobile ? 600 : 1200, 
+            treeDustCount: isMobile ? 800 : 2000, 
             rootDustCount: isMobile ? 200 : 600,
-            orbitDustCount: isMobile ? 400 : 1200, 
-            bgDustCount: isMobile ? 500 : 1500, 
+            orbitDustCount: isMobile ? 500 : 1200, 
+            bgDustCount: isMobile ? 600 : 1500, 
             heartCount: isMobile ? 40 : 80,
             photoCount: 60, 
-            
             photoBrightness: 0xdddddd, 
             hudPhotoBrightness: 0x888888, 
-            
             topText: "晴晴圣诞节快乐！",
             bgTexts: ["最爱晴晴", "天秤座&&水瓶座", "可爱的宝宝", "爱你一生一世", "I LOVE YOU", "3.19", "2.10", "10.18", "我们一直在一起", "一直到结婚"],
             colors: {
@@ -177,15 +164,14 @@
                 pink: 0xFF88C2, purple: 0xB090FF, blue: 0x33CCFF, yellow: 0xFFFF66,
                 libraGold: 0xFFE55C, aquaBlue: 0x33CCFF
             },
-            treeHeight: 80, 
-            treeRadius: isMobile ? 25 : 35, 
-            scatterRadius: 110
+            treeHeight: 80, treeRadius: isMobile ? 25 : 35, scatterRadius: 110
         };
 
         const state = {
             mode: 'TREE', 
-            inputMode: 'TOUCH', // Default to TOUCH (No Camera)
+            inputMode: 'TOUCH',
             isInspecting: false,
+            leftHandPinching: false, lastHandPos: { x: 0, y: 0 },
             unviewedPhotos: [], 
             isGrabLocked: false,
             album: [], 
@@ -213,7 +199,7 @@
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.toneMapping = THREE.ReinhardToneMapping; 
         renderer.toneMappingExposure = 1.5;
         container.appendChild(renderer.domElement);
@@ -227,12 +213,9 @@
         secondaryLight.position.set(-30, 20, -40);
         scene.add(secondaryLight);
 
-        // Bloom
         const renderScene = new THREE.RenderPass(scene, camera);
         const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-        bloomPass.threshold = 0.15; 
-        bloomPass.strength = 1.5;   
-        bloomPass.radius = 0.7;
+        bloomPass.threshold = 0.15; bloomPass.strength = 1.5; bloomPass.radius = 0.7;
         const composer = new THREE.EffectComposer(renderer);
         composer.addPass(renderScene);
         composer.addPass(bloomPass);
@@ -278,7 +261,8 @@
         
         const particles = [];
         const photoParticles = []; 
-        
+        const bgTextPositions = [];
+
         // Utils
         function getTreePos(i, total, radiusMod = 1, heightMod = 1, hOffset = 0) {
             const h = config.treeHeight * heightMod;
@@ -297,7 +281,6 @@
         function getDeepBackgroundPos(minDist = 40) {
             let pos, tooClose;
             let attempts = 0;
-            const bgTextPositions = []; // Local scope enough
             do {
                 pos = new THREE.Vector3((Math.random()-0.5)*280, (Math.random()-0.5)*160+20, -80-Math.random()*150);
                 tooClose = bgTextPositions.some(existingPos => existingPos.distanceTo(pos) < minDist);
@@ -370,7 +353,6 @@
             particles.push({mesh, treePos, scatterPos:getScatterPos(120), type:'dust', originalScale:mesh.scale.clone()});
         }
         
-        // Background Elements
         const orbitGeoSys=new THREE.BufferGeometry(); const orbitPosArr=[]; const orbitColArr=[];
         const orbitColors=[new THREE.Color(config.colors.gold), new THREE.Color(config.colors.pink), new THREE.Color(config.colors.blue)];
         for(let i=0; i<config.orbitDustCount; i++) {
@@ -465,7 +447,7 @@
             const indexInTree=Math.floor((i/config.photoCount)*config.decoCount);
             const treePos=getTreePos(indexInTree, config.decoCount, 1.4, 0.9);
             mesh.position.copy(treePos); mainGroup.add(mesh);
-            mesh.userData = { id: i }; // For Raycasting
+            mesh.userData = { id: i }; // Store ID for Raycasting
             const pObj={mesh, treePos, scatterPos:getScatterPos(), isPhoto:true, originalScale:new THREE.Vector3(1,1,1), id:i};
             particles.push(pObj); photoParticles.push(pObj);
         }
@@ -529,28 +511,26 @@
 
         // --- 8. INTERACTIONS (TOUCH & SHAKE) ---
         
+        // Mode Switcher
         window.setMode = (mode) => {
             state.inputMode = mode;
-            document.getElementById('btn-touch').classList.toggle('active', mode==='TOUCH');
-            document.getElementById('btn-hands').classList.toggle('active', mode==='HANDS');
+            const btns = document.querySelectorAll('.mode-btn');
+            btns.forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
             
+            document.getElementById('guide-touch').style.display = mode === 'TOUCH' ? 'block' : 'none';
+            document.getElementById('guide-hands').style.display = mode === 'HANDS' ? 'block' : 'none';
+            
+            // Re-init Logic
             if(mode === 'HANDS') {
                 cameraUtils.start().catch(e => console.log("Cam error", e));
-                document.getElementById('guide').innerHTML = `
-                    <div class="guide-item"><span class="key">✊ 握拳</span> 抽取 / 聚拢</div>
-                    <div class="guide-item"><span class="key">🖐 张开</span> 关闭 / 散开</div>
-                `;
             } else {
                 cameraUtils.stop();
-                document.getElementById('guide').innerHTML = `
-                    <div class="guide-item"><span class="key">☝️ 单指</span> 360°旋转</div>
-                    <div class="guide-item"><span class="key">✌️ 双击</span> 散开 / 聚拢</div>
-                    <div class="guide-item"><span class="key">👋 摇一摇</span> 抽取照片</div>
-                `;
+                document.getElementById('signal-light').style.backgroundColor = '#555';
             }
         };
 
-        // Shake
+        // Shake Detection
         let lastX, lastY, lastZ;
         let lastShakeTime = 0;
         const shakeThreshold = 15;
@@ -562,15 +542,19 @@
                 }).catch(console.error);
             }
         }
+        
         function handleMotion(e) {
             if(state.inputMode !== 'TOUCH') return;
             const acc = e.accelerationIncludingGravity;
             if(!acc) return;
+            
             const now = Date.now();
-            if(now - lastShakeTime < 1500) return; 
+            if(now - lastShakeTime < 1500) return; // Debounce
+
             const deltaX = Math.abs(acc.x - lastX);
             const deltaY = Math.abs(acc.y - lastY);
             const deltaZ = Math.abs(acc.z - lastZ);
+
             if(deltaX + deltaY + deltaZ > shakeThreshold) {
                 if(!state.isInspecting) {
                     showRandomPhoto();
@@ -581,31 +565,32 @@
         }
         window.addEventListener('devicemotion', handleMotion);
 
-        // Touch Logic
+        // Touch Gestures
         let lastTapTime = 0;
         let initialPinchDist = null;
         let isDragging = false;
         let lastTouchX = 0;
-        let lastTouchY = 0; // Added for Y-axis rotation
+        let lastTouchY = 0;
 
         const touchSurface = document.getElementById('canvas-container');
 
         touchSurface.addEventListener('touchstart', (e) => {
             if(state.inputMode !== 'TOUCH') return;
             
+            // 1 Finger: Click or Drag
             if (e.touches.length === 1) {
                 const now = Date.now();
                 isDragging = true;
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
 
-                // Double Tap Logic
+                // Double Tap (Scatter)
                 if (now - lastTapTime < 300) {
-                    if(state.mode === 'TREE') transitionTo('SCATTER');
-                    else transitionTo('TREE');
+                    transitionTo('SCATTER');
                 }
                 lastTapTime = now;
             }
+            // 2 Fingers: Pinch Start
             else if (e.touches.length === 2) {
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -615,27 +600,29 @@
 
         touchSurface.addEventListener('touchmove', (e) => {
             if(state.inputMode !== 'TOUCH') return;
-            e.preventDefault(); 
+            e.preventDefault(); // Prevent scrolling
 
-            // 1 Finger: XYZ Rotation
+            // 1 Finger: Rotate (XYZ 360)
             if (e.touches.length === 1 && isDragging) {
                 const deltaX = e.touches[0].clientX - lastTouchX;
                 const deltaY = e.touches[0].clientY - lastTouchY;
                 
-                mainGroup.rotation.y += deltaX * 0.005; // Y Axis
-                mainGroup.rotation.x += deltaY * 0.005; // X Axis (Up/Down)
+                mainGroup.rotation.y += deltaX * 0.005; // Drag Left/Right -> Spin Y
+                mainGroup.rotation.x += deltaY * 0.005; // Drag Up/Down -> Flip X
 
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
             }
-            // 2 Fingers: Pinch
+            // 2 Fingers: Pinch (Gather)
             else if (e.touches.length === 2 && initialPinchDist) {
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 const currentDist = Math.sqrt(dx*dx + dy*dy);
+                
+                // If pinching IN (distance getting smaller) -> Tree
                 if (currentDist < initialPinchDist - 50) { 
                     transitionTo('TREE');
-                    initialPinchDist = null; 
+                    initialPinchDist = null; // Consume event
                 }
             }
         }, {passive: false});
@@ -645,17 +632,23 @@
             isDragging = false;
             initialPinchDist = null;
 
-            // Tap to Inspect
+            // Tap Logic (Click to Inspect)
+            // If it was a quick tap without much movement
             if (e.changedTouches.length === 1) {
+                // Raycast
                 const touch = e.changedTouches[0];
                 mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+                
                 raycaster.setFromCamera(mouse, camera);
                 
+                // If viewing photo, close it
                 if (state.isInspecting) {
                     closePhoto();
                     return;
                 }
+
+                // Check intersection with photos
                 const intersects = raycaster.intersectObjects(photoParticles.map(p => p.mesh));
                 if (intersects.length > 0) {
                     const id = intersects[0].object.userData.id;
@@ -667,6 +660,7 @@
         // --- 9. MEDIAPIPE (HANDS MODE) ---
         function onResults(results) {
             if(state.inputMode !== 'HANDS') return;
+            const debugLight = document.getElementById('signal-light');
             let rightHand = null, leftHand = null;
             if (results.multiHandLandmarks) {
                 for (let i = 0; i < results.multiHandLandmarks.length; i++) {
@@ -675,7 +669,7 @@
                     if(label === 'Left') leftHand = results.multiHandLandmarks[i];
                 }
             }
-            // Simple Logic for Hands Mode
+
             if (rightHand) {
                 const wrist = rightHand[0]; let extended = 0;
                 [8,12,16,20].forEach(i => {
@@ -685,8 +679,9 @@
                 if (extended <= 1) transitionTo('TREE');
                 else if (extended >= 4) transitionTo('SCATTER');
             }
+
             if (leftHand) {
-                const indexTip = leftHand[8]; const thumbTip = leftHand[4];
+                const wrist = leftHand[0]; const indexTip = leftHand[8]; const thumbTip = leftHand[4];
                 let foldedCount = 0;
                 [12, 16, 20].forEach(i => {
                     const tip = leftHand[i]; 
@@ -701,13 +696,17 @@
                 const isOpen = extendedCount >= 4;
 
                 if (isFist) {
+                    debugLight.style.backgroundColor = "#00FF00";
                     if (!state.isInspecting && !state.isGrabLocked) {
                         state.isGrabLocked = true; showRandomPhoto(); setTimeout(() => state.isGrabLocked = false, 1500);
                     }
                 } else if (isOpen) {
+                    debugLight.style.backgroundColor = "#FFFFFF";
                     if (state.isInspecting && !state.isGrabLocked) {
                         closePhoto();
                     }
+                } else {
+                    debugLight.style.backgroundColor = "#555";
                 }
             }
         }
@@ -723,15 +722,20 @@
             facingMode: 'user'
         });
         
+        // Don't start cam automatically in Touch mode
+        // cameraUtils.start(); 
+
         // --- 10. LOOP ---
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
             const time = clock.getElapsedTime();
 
-            // Only auto-rotate if not being dragged
-            if (state.mode === 'TREE' && !isDragging && state.inputMode === 'TOUCH') {
-                 mainGroup.rotation.y += 0.002;
+            // Auto rotate if not interacting
+            if (state.mode !== 'TREE' && !state.leftHandPinching) mainGroup.rotation.y += 0.001;
+            else if (state.mode === 'TREE') { 
+                // Only auto rotate if not dragging via touch
+                if(!isDragging) mainGroup.rotation.y += 0.002;
             }
 
             orbitGroup.rotation.y = time * -0.1; orbitGroup.rotation.z = Math.sin(time*0.5) * 0.05;
