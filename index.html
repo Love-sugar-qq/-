@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Magical Christmas - Touch & Shake v34</title>
+    <title>Magical Christmas - 360° Free View v35</title>
     <style>
         /* 禁止所有默认触摸行为 */
         body { 
@@ -20,20 +20,15 @@
             display: flex; flex-direction: column; justify-content: space-between; padding: 15px; box-sizing: border-box;
         }
         
-        /* 模式切换顶栏 */
         .top-bar {
             display: flex; justify-content: space-between; align-items: flex-start; pointer-events: auto;
         }
 
-        /* 模式开关按钮 */
         .mode-switch {
             background: rgba(255,255,255,0.15);
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 20px;
-            padding: 5px;
-            display: flex;
-            gap: 5px;
+            border-radius: 20px; padding: 5px; display: flex; gap: 5px;
         }
         .mode-btn {
             background: transparent; border: none; color: #aaa;
@@ -44,13 +39,12 @@
             background: #FF1493; color: white; box-shadow: 0 2px 10px rgba(255,20,147,0.4);
         }
 
-        /* 提示框 (精简版) */
         #guide {
             margin-top: 10px;
             color: rgba(255,255,255,0.8); font-size: 12px; line-height: 1.6;
             text-shadow: 0 0 5px rgba(0,0,0,0.8);
             background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px;
-            pointer-events: none; /* 让触摸穿透 */
+            pointer-events: none; 
             max-width: 200px;
         }
         .key-point { color: #FFD700; font-weight: bold; }
@@ -85,7 +79,7 @@
 
     <div id="loader">
         <div class="spinner"></div>
-        <div style="font-size: 12px; font-weight:bold; letter-spacing: 2px;">LOADING...</div>
+        <div style="font-size: 12px; font-weight:bold; letter-spacing: 2px;">LOADING 360°...</div>
     </div>
 
     <video id="input_video" autoplay playsinline></video>
@@ -93,23 +87,22 @@
     <div id="ui-layer">
         <div class="top-bar">
             <div class="mode-switch">
-                <button class="mode-btn active" onclick="setMode('TOUCH')">👆 触屏版</button>
+                <button class="mode-btn active" onclick="setMode('TOUCH')">👆 360°触屏</button>
                 <button class="mode-btn" onclick="setMode('HANDS')">👋 手势版</button>
             </div>
         </div>
 
         <div id="guide">
             <div id="guide-touch">
-                <div>👋 <b>摇一摇</b>: 随机抽取惊喜</div>
-                <div>👆 <b>点击图片</b>: 查看大图</div>
-                <div>✌️ <b>双击屏幕</b>: 散开星星</div>
+                <div>☝️ <b>单指拖动</b>: XYZ 360°旋转</div>
+                <div>✌️ <b>双击屏幕</b>: 散开星空</div>
                 <div>🤏 <b>双指捏合</b>: 聚拢成树</div>
-                <div>☝️ <b>单指滑动</b>: 旋转视角</div>
+                <div>👆 <b>点击图片</b>: 放大查看</div>
+                <div>👋 <b>摇一摇</b>: 随机抽取</div>
             </div>
             <div id="guide-hands" style="display:none;">
                 <div>✊ <b>握拳</b>: 抽取 / 聚拢</div>
                 <div>🖐 <b>张开</b>: 关闭 / 散开</div>
-                <div style="font-size:10px; color:#888; margin-top:5px;">需保持手机稳定且距离适中</div>
             </div>
         </div>
         
@@ -119,7 +112,7 @@
             <input type="file" id="file-input" accept="image/*" multiple onchange="handlePhotoUpload(this)">
         </div>
         
-        <div id="status">v34.0 Touch & Shake Ready</div>
+        <div id="status">v35.0 Full 360° Rotation</div>
     </div>
 
     <div id="canvas-container"></div>
@@ -147,7 +140,6 @@
                 }
             }, 2500); 
             
-            // iOS Permission Check
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                 document.getElementById('btn-ios-shake').style.display = 'inline-block';
             }
@@ -177,7 +169,7 @@
 
         const state = {
             mode: 'TREE', 
-            inputMode: 'TOUCH', // 'TOUCH' or 'HANDS'
+            inputMode: 'TOUCH',
             isInspecting: false,
             leftHandPinching: false, lastHandPos: { x: 0, y: 0 },
             unviewedPhotos: [], 
@@ -235,7 +227,6 @@
         const heartGroup = new THREE.Group(); staticGroup.add(heartGroup);
         const constellationGroup = new THREE.Group(); staticGroup.add(constellationGroup);
         
-        // Raycaster for touch interaction
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -579,6 +570,7 @@
         let initialPinchDist = null;
         let isDragging = false;
         let lastTouchX = 0;
+        let lastTouchY = 0;
 
         const touchSurface = document.getElementById('canvas-container');
 
@@ -590,6 +582,7 @@
                 const now = Date.now();
                 isDragging = true;
                 lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
 
                 // Double Tap (Scatter)
                 if (now - lastTapTime < 300) {
@@ -609,11 +602,16 @@
             if(state.inputMode !== 'TOUCH') return;
             e.preventDefault(); // Prevent scrolling
 
-            // 1 Finger: Rotate
+            // 1 Finger: Rotate (XYZ 360)
             if (e.touches.length === 1 && isDragging) {
                 const deltaX = e.touches[0].clientX - lastTouchX;
-                mainGroup.rotation.y += deltaX * 0.005;
+                const deltaY = e.touches[0].clientY - lastTouchY;
+                
+                mainGroup.rotation.y += deltaX * 0.005; // Drag Left/Right -> Spin Y
+                mainGroup.rotation.x += deltaY * 0.005; // Drag Up/Down -> Flip X
+
                 lastTouchX = e.touches[0].clientX;
+                lastTouchY = e.touches[0].clientY;
             }
             // 2 Fingers: Pinch (Gather)
             else if (e.touches.length === 2 && initialPinchDist) {
@@ -737,9 +735,6 @@
             if (state.mode !== 'TREE' && !state.leftHandPinching) mainGroup.rotation.y += 0.001;
             else if (state.mode === 'TREE') { 
                 // Only auto rotate if not dragging via touch
-                // if(!isDragging) mainGroup.rotation.y = time * 0.2; 
-                // Actually, let's keep auto rotate but allow override? 
-                // For simplicity, let's just make it auto-rotate slowly unless dragged
                 if(!isDragging) mainGroup.rotation.y += 0.002;
             }
 
