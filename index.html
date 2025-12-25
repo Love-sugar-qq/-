@@ -5,26 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>For QingQing ❤️</title>
     <style>
-        /* --- 基础设置 --- */
+        /* 基础设置 */
         body { 
             margin: 0; overflow: hidden; background-color: #020202; 
             font-family: 'Helvetica Neue', sans-serif;
-            touch-action: none; /* 禁止浏览器默认缩放 */
+            touch-action: none; 
             -webkit-user-select: none; user-select: none;
             -webkit-touch-callout: none;
         }
         #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         
-        /* --- UI 层 (关键修改：pointer-events: none 让触摸穿透) --- */
         #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            z-index: 10;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
             display: flex; flex-direction: column; justify-content: space-between; padding: 10px; box-sizing: border-box;
-            opacity: 0; transition: opacity 1s; 
-            pointer-events: none; /* 让点击穿透空白区域 */
+            opacity: 0; transition: opacity 1s; pointer-events: none;
         }
-
-        /* --- 只有按钮和输入框才允许点击 --- */
+        
+        /* 允许交互的区域 */
         .top-bar, .controls, #lock-screen { pointer-events: auto; }
 
         /* 密码锁屏 */
@@ -45,8 +42,9 @@
             border-radius: 50px; font-weight: bold; cursor: pointer;
         }
         .error-msg { color: red; font-size: 12px; margin-top: 10px; height: 15px; }
+        /* 加载进度提示 */
+        #loading-text { margin-top: 20px; font-size: 12px; color: #aaa; letter-spacing: 1px; }
 
-        /* 顶部栏 */
         .top-bar { display: flex; justify-content: flex-end; align-items: flex-start; }
         .mode-switch {
             background: rgba(255,255,255,0.15); backdrop-filter: blur(5px);
@@ -58,18 +56,15 @@
         }
         .mode-btn.active { background: #FF1493; color: white; }
 
-        /* 提示框 */
         #guide {
             position: absolute; bottom: 85px; left: 10px; width: 110px; 
             color: rgba(255,255,255,0.7); font-size: 10px; line-height: 1.4;
             background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;
-            border-left: 2px solid #FFD700; 
-            pointer-events: none; /* 提示框本身不挡手 */
+            border-left: 2px solid #FFD700; pointer-events: none;
         }
         .key { color: #FFD700; font-weight: bold; }
         .guide-row { margin-bottom: 2px; }
         
-        /* 底部按钮区 */
         .controls { 
             text-align: center; margin-bottom: 15px; 
             display: flex; justify-content: center; gap: 8px; 
@@ -91,18 +86,13 @@
         #file-input, #folder-input { display: none; }
         #status { position: absolute; bottom: 5px; left: 10px; color: rgba(255,255,255,0.4); font-size: 9px; pointer-events: none; }
         #input_video { display: none; }
-
-        /* 加载进度 */
-        #loading-text {
-            margin-top: 20px; font-size: 12px; color: #aaa; letter-spacing: 1px;
-        }
     </style>
 </head>
 <body>
 
     <div id="lock-screen">
         <div class="lock-title">🎄 FOR QINGQING ❤️</div>
-        <input type="password" id="password-input" class="lock-input" placeholder="我们的纪念日">
+        <input type="password" id="password-input" class="lock-input" placeholder="输入我们的纪念日">
         <button class="lock-btn" onclick="checkPassword()">开启惊喜</button>
         <div class="error-msg" id="error-msg"></div>
         <div id="loading-text"></div>
@@ -127,7 +117,7 @@
         </div>
         
         <div class="controls">
-            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 补充照片</button>
+            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 导入照片(多选)</button>
             <button class="btn-main" id="btn-folder-upload" onclick="document.getElementById('folder-input').click()">+ 文件夹</button>
             <button class="btn-sub" id="btn-shake" style="display:none;" onclick="requestMotion()">⚡ 摇一摇</button>
             
@@ -135,7 +125,7 @@
             <input type="file" id="folder-input" webkitdirectory directory multiple onchange="handlePhotoUpload(this)">
         </div>
         
-        <div id="status">v45.0 Interactive Fix</div>
+        <div id="status">v47.0 Turbo Mode</div>
     </div>
 
     <div id="canvas-container"></div>
@@ -154,7 +144,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <script>
-        // --- 0. PRIVACY CONFIG & LOCK ---
+        // --- 0. CONFIG ---
         const CORRECT_PASSWORD = "0319"; 
         const SECRET_FOLDER = "secret_love_hxq"; 
         const TOTAL_PRELOAD_IMAGES = 80;
@@ -162,35 +152,29 @@
         function checkPassword() {
             const input = document.getElementById('password-input').value;
             if (input === CORRECT_PASSWORD) {
-                // 开始加载动画
-                document.getElementById('loading-text').innerText = "正在验证并加载资源...";
+                // UI Feedback
+                document.getElementById('loading-text').innerText = "极速加载回忆中...";
+                const lockScreen = document.getElementById('lock-screen');
+                const uiLayer = document.getElementById('ui-layer');
                 
-                // 延迟一秒解锁，确保逻辑就绪
-                setTimeout(() => {
-                    const lockScreen = document.getElementById('lock-screen');
-                    const uiLayer = document.getElementById('ui-layer');
-                    
-                    lockScreen.style.opacity = 0;
-                    setTimeout(() => lockScreen.style.display = 'none', 800);
-                    
-                    uiLayer.style.opacity = 1;
-                    
-                    // 开始加载照片
-                    preloadPhotos(); 
-                    
-                    // 请求摇一摇权限
-                    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                        document.getElementById('btn-shake').style.display = 'block';
-                    }
-                }, 500);
+                // Unlock immediately
+                lockScreen.style.opacity = 0;
+                setTimeout(() => lockScreen.style.display = 'none', 800);
+                uiLayer.style.opacity = 1;
+                
+                // Start Turbo Load
+                preloadPhotosTurbo();
+                
+                if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                    document.getElementById('btn-shake').style.display = 'block';
+                }
             } else {
                 document.getElementById('error-msg').innerText = "密码错误，请重试 ❤️";
             }
         }
 
-        // --- 1. CONFIGURATION ---
+        // --- 1. SETTINGS ---
         const isMobile = window.innerWidth < 768; 
-
         const config = {
             decoCount: isMobile ? 800 : 1500, 
             treeDustCount: isMobile ? 1000 : 2500,
@@ -225,7 +209,7 @@
         }
         resetDeck();
 
-        // --- 2. THREE.JS SETUP ---
+        // --- 2. THREE.JS ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x020202, 0.003);
@@ -251,7 +235,6 @@
         secondaryLight.position.set(-30, 20, -40);
         scene.add(secondaryLight);
 
-        // Fail-safe Bloom
         let composer;
         try {
             const renderScene = new THREE.RenderPass(scene, camera);
@@ -260,7 +243,7 @@
             composer = new THREE.EffectComposer(renderer);
             composer.addPass(renderScene);
             composer.addPass(bloomPass);
-        } catch(e) { console.error("Bloom Error", e); }
+        } catch(e){}
 
         const mainGroup = new THREE.Group(); scene.add(mainGroup); 
         const staticGroup = new THREE.Group(); scene.add(staticGroup); 
@@ -470,34 +453,51 @@
             particles.push(pObj); photoParticles.push(pObj);
         }
 
-        // --- ★★★ ASYNC PRELOAD WITH PROGRESS ★★★ ---
-        function preloadPhotos() {
-            const loader = new THREE.TextureLoader();
+        // --- ★★★ TURBO PRELOAD (ASYNC + BITMAP) ★★★ ---
+        function preloadPhotosTurbo() {
             let loadedCount = 0;
             const statusEl = document.getElementById('status');
-            
+            const loadingText = document.getElementById('loading-text'); // If lock screen still visible
+
             for(let i = 1; i <= TOTAL_PRELOAD_IMAGES; i++) {
-                loader.load(
-                    `${SECRET_FOLDER}/${i}.jpg`, 
-                    (tex) => {
+                const imgUrl = `${SECRET_FOLDER}/${i}.jpg`;
+                
+                // Fetch -> Blob -> Bitmap (Backgroud Thread)
+                fetch(imgUrl)
+                    .then(res => {
+                        if (!res.ok) throw new Error("404");
+                        return res.blob();
+                    })
+                    .then(blob => createImageBitmap(blob, { 
+                        // Downscale to 256x256 for speed & memory
+                        resizeWidth: 256, resizeHeight: 256, resizeQuality: 'medium' 
+                    }))
+                    .then(bitmap => {
+                        const tex = new THREE.CanvasTexture(bitmap);
                         tex.encoding = THREE.sRGBEncoding;
+                        // Important: Free memory when updated
+                        tex.onUpdate = () => { bitmap.close(); }; 
+
                         const slotIndex = (i - 1) % config.photoCount;
                         state.album[slotIndex] = tex;
+                        
                         const slot = photoParticles[slotIndex];
                         if(slot && slot.mesh) {
                             slot.mesh.material.map = tex;
                             slot.mesh.material.needsUpdate = true;
                             slot.mesh.material.color.setHex(config.photoBrightness);
                         }
+                        
                         loadedCount++;
-                        if(statusEl) statusEl.innerText = `Loading: ${loadedCount}/${TOTAL_PRELOAD_IMAGES}`;
-                    },
-                    undefined,
-                    (err) => { } // Ignore 404
-                );
+                        if(statusEl) statusEl.innerText = `Loaded: ${loadedCount}/${TOTAL_PRELOAD_IMAGES}`;
+                    })
+                    .catch(err => { 
+                        // console.log("Missing:", imgUrl); 
+                    });
             }
         }
 
+        // --- INTERACTIONS ---
         function transitionTo(newState) {
             if(state.mode === newState) return;
             state.mode = newState;
@@ -518,13 +518,11 @@
             
             const nextId = state.unviewedPhotos.pop();
             const tex = state.album[nextId];
-            
             if(tex) {
                 hudMesh.material.map = tex;
                 hudMesh.material.color.setHex(config.hudPhotoBrightness); 
                 hudMesh.material.needsUpdate = true;
             }
-
             state.isInspecting = true;
             hudGroup.visible = true;
             hudGroup.scale.set(0.1, 0.1, 0.1);
@@ -548,10 +546,7 @@
         function closePhoto() {
             if(!state.isInspecting) return;
             state.isInspecting = false;
-            gsap.to(hudGroup.scale, { 
-                x: 0.1, y: 0.1, z: 0.1, duration: 0.3, 
-                onComplete: () => { hudGroup.visible = false; } 
-            });
+            gsap.to(hudGroup.scale, { x: 0.1, y: 0.1, z: 0.1, duration: 0.3, onComplete: () => { hudGroup.visible = false; } });
         }
 
         window.setMode = (mode) => {
@@ -559,12 +554,8 @@
             const btns = document.querySelectorAll('.mode-btn');
             btns.forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
-            
-            if(mode === 'HANDS') {
-                cameraUtils.start().catch(e => console.log("Cam error", e));
-            } else {
-                cameraUtils.stop();
-            }
+            if(mode === 'HANDS') { cameraUtils.start().catch(e => console.log("Cam error", e)); } 
+            else { cameraUtils.stop(); }
         };
 
         let lastX, lastY, lastZ;
@@ -588,19 +579,13 @@
             const deltaY = Math.abs(acc.y - lastY);
             const deltaZ = Math.abs(acc.z - lastZ);
             if(deltaX + deltaY + deltaZ > shakeThreshold) {
-                if(!state.isInspecting) {
-                    showRandomPhoto();
-                    lastShakeTime = now;
-                }
+                if(!state.isInspecting) { showRandomPhoto(); lastShakeTime = now; }
             }
             lastX = acc.x; lastY = acc.y; lastZ = acc.z;
         }
         window.addEventListener('devicemotion', handleMotion);
 
-        // --- ★★★ INTERACTION FIX ★★★ ---
-        // Listeners attached to container, which is BELOW UI layer.
-        // We set UI Layer to pointer-events: none so clicks pass through.
-        
+        // --- TOUCH LOGIC ---
         let lastTapTime = 0;
         let initialPinchDist = null;
         let isDragging = false;
@@ -611,20 +596,16 @@
 
         touchSurface.addEventListener('touchstart', (e) => {
             if(state.inputMode !== 'TOUCH') return;
-            
             if (e.touches.length === 1) {
                 const now = Date.now();
                 isDragging = true;
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
-
                 if (now - lastTapTime < 300) {
-                    if(state.mode === 'TREE') transitionTo('SCATTER');
-                    else transitionTo('TREE');
+                    if(state.mode === 'TREE') transitionTo('SCATTER'); else transitionTo('TREE');
                 }
                 lastTapTime = now;
-            }
-            else if (e.touches.length === 2) {
+            } else if (e.touches.length === 2) {
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 initialPinchDist = Math.sqrt(dx*dx + dy*dy);
@@ -634,25 +615,18 @@
         touchSurface.addEventListener('touchmove', (e) => {
             if(state.inputMode !== 'TOUCH') return;
             e.preventDefault(); 
-
             if (e.touches.length === 1 && isDragging) {
                 const deltaX = e.touches[0].clientX - lastTouchX;
                 const deltaY = e.touches[0].clientY - lastTouchY;
-                
                 mainGroup.rotation.y += deltaX * 0.005; 
                 mainGroup.rotation.x += deltaY * 0.005; 
-
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
-            }
-            else if (e.touches.length === 2 && initialPinchDist) {
+            } else if (e.touches.length === 2 && initialPinchDist) {
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 const currentDist = Math.sqrt(dx*dx + dy*dy);
-                if (currentDist < initialPinchDist - 50) { 
-                    transitionTo('TREE');
-                    initialPinchDist = null; 
-                }
+                if (currentDist < initialPinchDist - 50) { transitionTo('TREE'); initialPinchDist = null; }
             }
         }, {passive: false});
 
@@ -660,18 +634,12 @@
             if(state.inputMode !== 'TOUCH') return;
             isDragging = false;
             initialPinchDist = null;
-
             if (e.changedTouches.length === 1) {
                 const touch = e.changedTouches[0];
                 mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
-                
                 raycaster.setFromCamera(mouse, camera);
-                
-                if (state.isInspecting) {
-                    closePhoto();
-                    return;
-                }
+                if (state.isInspecting) { closePhoto(); return; }
                 const intersects = raycaster.intersectObjects(photoParticles.map(p => p.mesh));
                 if (intersects.length > 0) {
                     const id = intersects[0].object.userData.id;
@@ -680,6 +648,31 @@
             }
         });
 
+        // --- MANUAL UPLOAD (Optimized) ---
+        window.handlePhotoUpload = (input) => {
+            if(!input.files.length) return;
+            const files = Array.from(input.files).slice(0, 80); 
+            files.forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                createImageBitmap(file, { resizeWidth: 256, resizeHeight: 256, resizeQuality: 'medium' })
+                .then(bitmap => {
+                    const tex = new THREE.CanvasTexture(bitmap);
+                    tex.encoding = THREE.sRGBEncoding;
+                    tex.onUpdate = () => { bitmap.close(); };
+                    state.album[state.uploadIndex % config.photoCount] = tex;
+                    const slot = photoParticles[state.uploadIndex % config.photoCount];
+                    if(slot && slot.mesh) {
+                        slot.mesh.material.map = tex; 
+                        slot.mesh.material.needsUpdate = true;
+                        slot.mesh.material.color.setHex(config.photoBrightness); 
+                    }
+                    state.uploadIndex++;
+                });
+            });
+            alert("🎉 已导入 " + files.length + " 张照片！");
+        };
+
+        // --- HANDS ---
         function onResults(results) {
             if(state.inputMode !== 'HANDS') return;
             let rightHand = null, leftHand = null;
@@ -690,40 +683,34 @@
                     if(label === 'Left') leftHand = results.multiHandLandmarks[i];
                 }
             }
-
             if (rightHand) {
                 const wrist = rightHand[0]; let extended = 0;
                 [8,12,16,20].forEach(i => {
                     const tip = rightHand[i]; 
                     if(Math.sqrt(Math.pow(tip.x-wrist.x,2)+Math.pow(tip.y-wrist.y,2)) > 0.15) extended++;
                 });
-                if (extended <= 1) transitionTo('TREE');
-                else if (extended >= 4) transitionTo('SCATTER');
+                if (extended <= 1) transitionTo('TREE'); else if (extended >= 4) transitionTo('SCATTER');
             }
-
             if (leftHand) {
-                const wrist = leftHand[0]; const indexTip = leftHand[8]; const thumbTip = leftHand[4];
+                const wrist = leftHand[0]; const thumbTip = leftHand[4]; const indexTip = leftHand[8];
                 let foldedCount = 0;
                 [12, 16, 20].forEach(i => {
                     const tip = leftHand[i]; 
-                    if(Math.sqrt(Math.pow(tip.x-leftHand[0].x,2)+Math.pow(tip.y-leftHand[0].y,2)) < 0.15) foldedCount++;
+                    if(Math.sqrt(Math.pow(tip.x-wrist.x,2)+Math.pow(tip.y-wrist.y,2)) < 0.15) foldedCount++;
                 });
                 const isFist = foldedCount >= 3; 
                 let extendedCount = 0;
                 [8,12,16,20].forEach(i => {
                     const tip = leftHand[i]; 
-                    if(Math.sqrt(Math.pow(tip.x-leftHand[0].x,2)+Math.pow(tip.y-leftHand[0].y,2)) > 0.15) extendedCount++;
+                    if(Math.sqrt(Math.pow(tip.x-wrist.x,2)+Math.pow(tip.y-wrist.y,2)) > 0.15) extendedCount++;
                 });
                 const isOpen = extendedCount >= 4;
-
                 if (isFist) {
                     if (!state.isInspecting && !state.isGrabLocked) {
                         state.isGrabLocked = true; showRandomPhoto(); setTimeout(() => state.isGrabLocked = false, 1500);
                     }
                 } else if (isOpen) {
-                    if (state.isInspecting && !state.isGrabLocked) {
-                        closePhoto();
-                    }
+                    if (state.isInspecting && !state.isGrabLocked) { closePhoto(); }
                 }
             }
         }
@@ -735,11 +722,15 @@
         const video = document.getElementById('input_video');
         const cameraUtils = new Camera(video, {
             onFrame: async () => { await hands.send({image: video}); },
-            width: isMobile ? 360 : 640, height: isMobile ? 240 : 480,
-            facingMode: 'user'
+            width: isMobile ? 360 : 640, height: isMobile ? 240 : 480, facingMode: 'user'
         });
-        
-        // --- 10. LOOP ---
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight); 
+            if(composer) composer.setSize(window.innerWidth, window.innerHeight);
+        });
+
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
@@ -766,57 +757,9 @@
                 if(p.type === 'dust') p.mesh.scale.multiplyScalar(1 + Math.sin(time * 5 + p.treePos.x)*0.005); 
             });
 
-            if(composer) composer.render();
-            else renderer.render(scene, camera);
+            if(composer) composer.render(); else renderer.render(scene, camera);
         }
-
-        window.handlePhotoUpload = (input) => {
-            if(!input.files.length) return;
-            const files = Array.from(input.files).slice(0, 80); 
-            
-            files.forEach(file => {
-                if (!file.type.startsWith('image/')) return;
-
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        const maxDim = 512;
-                        let w = img.width, h = img.height;
-                        if (w > h) { if (w > maxDim) { h *= maxDim / w; w = maxDim; } }
-                        else { if (h > maxDim) { w *= maxDim / h; h = maxDim; } }
-                        
-                        canvas.width = w; canvas.height = h;
-                        ctx.drawImage(img, 0, 0, w, h);
-                        
-                        const tex = new THREE.CanvasTexture(canvas);
-                        tex.encoding = THREE.sRGBEncoding;
-                        
-                        state.album[state.uploadIndex % config.photoCount] = tex;
-                        const slot = photoParticles[state.uploadIndex % config.photoCount];
-                        if(slot && slot.mesh) {
-                            slot.mesh.material.map = tex; 
-                            slot.mesh.material.needsUpdate = true;
-                            slot.mesh.material.color.setHex(config.photoBrightness); 
-                        }
-                        state.uploadIndex++;
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-            alert("🎉 已导入 " + files.length + " 张照片！");
-        };
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
-        });
-
         animate();
     </script>
 </body>
 </html>
-
