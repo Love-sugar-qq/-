@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Magical Christmas - 360° Free View v35</title>
+    <title>Magical Christmas - Folder Import v36</title>
     <style>
-        /* 禁止所有默认触摸行为 */
+        /* 基础设置 */
         body { 
             margin: 0; overflow: hidden; background-color: #020202; 
             font-family: 'Helvetica Neue', sans-serif;
@@ -17,49 +17,68 @@
         
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;
-            display: flex; flex-direction: column; justify-content: space-between; padding: 15px; box-sizing: border-box;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 10px; box-sizing: border-box;
         }
         
+        /* 顶部栏 */
         .top-bar {
-            display: flex; justify-content: space-between; align-items: flex-start; pointer-events: auto;
+            display: flex; justify-content: flex-end; align-items: flex-start; pointer-events: auto;
         }
 
         .mode-switch {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 20px; padding: 5px; display: flex; gap: 5px;
+            background: rgba(255,255,255,0.15); backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 15px; padding: 3px; display: flex; gap: 3px;
         }
         .mode-btn {
             background: transparent; border: none; color: #aaa;
-            padding: 8px 12px; font-size: 12px; font-weight: bold;
-            border-radius: 15px; cursor: pointer; transition: all 0.3s;
+            padding: 5px 10px; font-size: 10px; font-weight: bold;
+            border-radius: 12px; cursor: pointer; transition: all 0.2s;
         }
         .mode-btn.active {
-            background: #FF1493; color: white; box-shadow: 0 2px 10px rgba(255,20,147,0.4);
+            background: #FF1493; color: white;
         }
 
+        /* --- 修改点：左下角微型提示框 --- */
         #guide {
-            margin-top: 10px;
-            color: rgba(255,255,255,0.8); font-size: 12px; line-height: 1.6;
-            text-shadow: 0 0 5px rgba(0,0,0,0.8);
-            background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px;
-            pointer-events: none; 
-            max-width: 200px;
+            position: absolute; 
+            bottom: 85px; /* 位于按钮上方 */
+            left: 10px;
+            width: 110px; /* 限制宽度 */
+            color: rgba(255,255,255,0.7); 
+            font-size: 10px; /* 极小字体 */
+            line-height: 1.4;
+            background: rgba(0,0,0,0.2); /* 极淡背景 */
+            padding: 8px; 
+            border-radius: 8px;
+            border-left: 2px solid #FFD700;
+            pointer-events: none;
         }
-        .key-point { color: #FFD700; font-weight: bold; }
+        .key { color: #FFD700; font-weight: bold; }
+        .guide-row { margin-bottom: 2px; }
         
-        .controls { pointer-events: auto; text-align: center; margin-bottom: 20px; }
+        /* 底部控制栏 */
+        .controls { 
+            pointer-events: auto; text-align: center; margin-bottom: 15px; 
+            display: flex; justify-content: center; gap: 8px; 
+        }
         .btn-main {
             background: linear-gradient(135deg, #FF1493, #FFD700);
             border: none; color: #fff;
-            padding: 12px 25px; margin: 0 5px;
-            text-transform: uppercase; font-size: 12px; border-radius: 50px;
-            box-shadow: 0 5px 15px rgba(255, 20, 147, 0.5); font-weight: bold;
+            padding: 10px 15px; 
+            text-transform: uppercase; font-size: 11px; border-radius: 50px;
+            box-shadow: 0 4px 10px rgba(255, 20, 147, 0.4); font-weight: bold;
+            white-space: nowrap;
         }
-        #file-input { display: none; }
+        /* 摇一摇按钮 */
+        .btn-sub {
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
+            color: #ccc; padding: 10px 12px; font-size: 11px; border-radius: 50px;
+            backdrop-filter: blur(5px);
+        }
+        #file-input, #folder-input { display: none; }
 
-        #status { position: absolute; bottom: 5px; left: 10px; color: rgba(255,255,255,0.3); font-size: 10px; }
+        #status { position: absolute; bottom: 5px; left: 10px; color: rgba(255,255,255,0.2); font-size: 9px; }
         
         #loader {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #020202;
@@ -67,19 +86,18 @@
             flex-direction: column; transition: opacity 1.2s;
         }
         .spinner {
-            width: 40px; height: 40px; border: 3px solid rgba(255, 215, 0, 0.2); border-top: 3px solid #FFD700; border-radius: 50%;
-            animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; margin-bottom: 15px;
+            width: 30px; height: 30px; border: 2px solid rgba(255, 215, 0, 0.2); border-top: 2px solid #FFD700; border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; margin-bottom: 10px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        #input_video { position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none; }
+        #input_video { display: none; }
     </style>
 </head>
 <body>
 
     <div id="loader">
         <div class="spinner"></div>
-        <div style="font-size: 12px; font-weight:bold; letter-spacing: 2px;">LOADING 360°...</div>
+        <div style="font-size: 10px; letter-spacing: 2px; opacity: 0.8;">LOADING</div>
     </div>
 
     <video id="input_video" autoplay playsinline></video>
@@ -87,32 +105,30 @@
     <div id="ui-layer">
         <div class="top-bar">
             <div class="mode-switch">
-                <button class="mode-btn active" onclick="setMode('TOUCH')">👆 360°触屏</button>
-                <button class="mode-btn" onclick="setMode('HANDS')">👋 手势版</button>
+                <button class="mode-btn active" id="btn-touch" onclick="setMode('TOUCH')">👆 触屏</button>
+                <button class="mode-btn" id="btn-hands" onclick="setMode('HANDS')">👋 手势</button>
             </div>
         </div>
 
         <div id="guide">
-            <div id="guide-touch">
-                <div>☝️ <b>单指拖动</b>: XYZ 360°旋转</div>
-                <div>✌️ <b>双击屏幕</b>: 散开星空</div>
-                <div>🤏 <b>双指捏合</b>: 聚拢成树</div>
-                <div>👆 <b>点击图片</b>: 放大查看</div>
-                <div>👋 <b>摇一摇</b>: 随机抽取</div>
-            </div>
-            <div id="guide-hands" style="display:none;">
-                <div>✊ <b>握拳</b>: 抽取 / 聚拢</div>
-                <div>🖐 <b>张开</b>: 关闭 / 散开</div>
-            </div>
+            <div class="guide-row"><span class="key">👆 拖动</span> 360°旋转</div>
+            <div class="guide-row"><span class="key">✌️ 双击</span> 散开/聚拢</div>
+            <div class="guide-row"><span class="key">🤏 捏合</span> 树形/变大</div>
+            <div class="guide-row"><span class="key">👋 摇晃</span> 抽取照片</div>
+            <div style="margin-top:4px; color:#aaa;">点击照片放大</div>
         </div>
         
         <div class="controls">
-            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 导入照片</button>
-            <button class="btn-main" id="btn-ios-shake" style="background:#444; display:none;" onclick="requestMotion()">开启摇一摇</button>
+            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 照片</button>
+            <button class="btn-main" onclick="document.getElementById('folder-input').click()">+ 文件夹</button>
+            
+            <button class="btn-sub" id="btn-shake" style="display:none;" onclick="requestMotion()">⚡ 摇一摇</button>
+            
             <input type="file" id="file-input" accept="image/*" multiple onchange="handlePhotoUpload(this)">
+            <input type="file" id="folder-input" webkitdirectory directory multiple onchange="handlePhotoUpload(this)">
         </div>
         
-        <div id="status">v35.0 Full 360° Rotation</div>
+        <div id="status">v36.0 Folder Support</div>
     </div>
 
     <div id="canvas-container"></div>
@@ -136,23 +152,24 @@
             setTimeout(() => {
                 const loader = document.getElementById('loader');
                 if(loader && loader.style.display !== 'none') {
-                    loader.style.opacity = 0; setTimeout(() => loader.style.display = 'none', 1000);
+                    loader.style.opacity = 0; setTimeout(() => loader.style.display = 'none', 500);
                 }
-            }, 2500); 
+            }, 1500); 
             
             if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                document.getElementById('btn-ios-shake').style.display = 'inline-block';
+                document.getElementById('btn-shake').style.display = 'block';
             }
         });
 
         // --- 1. CONFIGURATION ---
         const isMobile = window.innerWidth < 768; 
+
         const config = {
-            decoCount: isMobile ? 600 : 1200, 
-            treeDustCount: isMobile ? 800 : 2000, 
+            decoCount: isMobile ? 500 : 1200, 
+            treeDustCount: isMobile ? 600 : 2000, 
             rootDustCount: isMobile ? 200 : 600,
-            orbitDustCount: isMobile ? 500 : 1200, 
-            bgDustCount: isMobile ? 600 : 1500, 
+            orbitDustCount: isMobile ? 400 : 1200, 
+            bgDustCount: isMobile ? 500 : 1500, 
             heartCount: isMobile ? 40 : 80,
             photoCount: 60, 
             photoBrightness: 0xdddddd, 
@@ -169,9 +186,8 @@
 
         const state = {
             mode: 'TREE', 
-            inputMode: 'TOUCH',
+            inputMode: 'TOUCH', 
             isInspecting: false,
-            leftHandPinching: false, lastHandPos: { x: 0, y: 0 },
             unviewedPhotos: [], 
             isGrabLocked: false,
             album: [], 
@@ -199,7 +215,7 @@
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
         renderer.toneMapping = THREE.ReinhardToneMapping; 
         renderer.toneMappingExposure = 1.5;
         container.appendChild(renderer.domElement);
@@ -220,7 +236,7 @@
         composer.addPass(renderScene);
         composer.addPass(bloomPass);
 
-        // --- 3. GROUPS & RAYCASTER ---
+        // --- 3. GROUPS ---
         const mainGroup = new THREE.Group(); scene.add(mainGroup); 
         const staticGroup = new THREE.Group(); scene.add(staticGroup); 
         const orbitGroup = new THREE.Group(); scene.add(orbitGroup);
@@ -261,8 +277,7 @@
         
         const particles = [];
         const photoParticles = []; 
-        const bgTextPositions = [];
-
+        
         // Utils
         function getTreePos(i, total, radiusMod = 1, heightMod = 1, hOffset = 0) {
             const h = config.treeHeight * heightMod;
@@ -281,6 +296,7 @@
         function getDeepBackgroundPos(minDist = 40) {
             let pos, tooClose;
             let attempts = 0;
+            const bgTextPositions = [];
             do {
                 pos = new THREE.Vector3((Math.random()-0.5)*280, (Math.random()-0.5)*160+20, -80-Math.random()*150);
                 tooClose = bgTextPositions.some(existingPos => existingPos.distanceTo(pos) < minDist);
@@ -476,7 +492,7 @@
             
             if(tex) {
                 hudMesh.material.map = tex;
-                hudMesh.material.color.setHex(config.hudPhotoBrightness); 
+                hudMesh.material.color.setHex(config.hudPhotoBrightness); 
                 hudMesh.material.needsUpdate = true;
             }
 
@@ -503,9 +519,9 @@
         function closePhoto() {
             if(!state.isInspecting) return;
             state.isInspecting = false;
-            gsap.to(hudGroup.scale, { 
-                x: 0.1, y: 0.1, z: 0.1, duration: 0.3, 
-                onComplete: () => { hudGroup.visible = false; } 
+            gsap.to(hudGroup.scale, { 
+                x: 0.1, y: 0.1, z: 0.1, duration: 0.3, 
+                onComplete: () => { hudGroup.visible = false; } 
             });
         }
 
@@ -518,15 +534,11 @@
             btns.forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
             
-            document.getElementById('guide-touch').style.display = mode === 'TOUCH' ? 'block' : 'none';
-            document.getElementById('guide-hands').style.display = mode === 'HANDS' ? 'block' : 'none';
-            
             // Re-init Logic
             if(mode === 'HANDS') {
                 cameraUtils.start().catch(e => console.log("Cam error", e));
             } else {
                 cameraUtils.stop();
-                document.getElementById('signal-light').style.backgroundColor = '#555';
             }
         };
 
@@ -586,7 +598,8 @@
 
                 // Double Tap (Scatter)
                 if (now - lastTapTime < 300) {
-                    transitionTo('SCATTER');
+                    if(state.mode === 'TREE') transitionTo('SCATTER');
+                    else transitionTo('TREE');
                 }
                 lastTapTime = now;
             }
@@ -620,7 +633,7 @@
                 const currentDist = Math.sqrt(dx*dx + dy*dy);
                 
                 // If pinching IN (distance getting smaller) -> Tree
-                if (currentDist < initialPinchDist - 50) { 
+                if (currentDist < initialPinchDist - 50) { 
                     transitionTo('TREE');
                     initialPinchDist = null; // Consume event
                 }
@@ -660,7 +673,6 @@
         // --- 9. MEDIAPIPE (HANDS MODE) ---
         function onResults(results) {
             if(state.inputMode !== 'HANDS') return;
-            const debugLight = document.getElementById('signal-light');
             let rightHand = null, leftHand = null;
             if (results.multiHandLandmarks) {
                 for (let i = 0; i < results.multiHandLandmarks.length; i++) {
@@ -673,7 +685,7 @@
             if (rightHand) {
                 const wrist = rightHand[0]; let extended = 0;
                 [8,12,16,20].forEach(i => {
-                    const tip = rightHand[i]; 
+                    const tip = rightHand[i]; 
                     if(Math.sqrt(Math.pow(tip.x-wrist.x,2)+Math.pow(tip.y-wrist.y,2)) > 0.15) extended++;
                 });
                 if (extended <= 1) transitionTo('TREE');
@@ -684,29 +696,25 @@
                 const wrist = leftHand[0]; const indexTip = leftHand[8]; const thumbTip = leftHand[4];
                 let foldedCount = 0;
                 [12, 16, 20].forEach(i => {
-                    const tip = leftHand[i]; 
+                    const tip = leftHand[i]; 
                     if(Math.sqrt(Math.pow(tip.x-leftHand[0].x,2)+Math.pow(tip.y-leftHand[0].y,2)) < 0.15) foldedCount++;
                 });
-                const isFist = foldedCount >= 3; 
+                const isFist = foldedCount >= 3; 
                 let extendedCount = 0;
                 [8,12,16,20].forEach(i => {
-                    const tip = leftHand[i]; 
+                    const tip = leftHand[i]; 
                     if(Math.sqrt(Math.pow(tip.x-leftHand[0].x,2)+Math.pow(tip.y-leftHand[0].y,2)) > 0.15) extendedCount++;
                 });
                 const isOpen = extendedCount >= 4;
 
                 if (isFist) {
-                    debugLight.style.backgroundColor = "#00FF00";
                     if (!state.isInspecting && !state.isGrabLocked) {
                         state.isGrabLocked = true; showRandomPhoto(); setTimeout(() => state.isGrabLocked = false, 1500);
                     }
                 } else if (isOpen) {
-                    debugLight.style.backgroundColor = "#FFFFFF";
                     if (state.isInspecting && !state.isGrabLocked) {
                         closePhoto();
                     }
-                } else {
-                    debugLight.style.backgroundColor = "#555";
                 }
             }
         }
@@ -722,20 +730,15 @@
             facingMode: 'user'
         });
         
-        // Don't start cam automatically in Touch mode
-        // cameraUtils.start(); 
-
         // --- 10. LOOP ---
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
             const time = clock.getElapsedTime();
 
-            // Auto rotate if not interacting
-            if (state.mode !== 'TREE' && !state.leftHandPinching) mainGroup.rotation.y += 0.001;
-            else if (state.mode === 'TREE') { 
-                // Only auto rotate if not dragging via touch
-                if(!isDragging) mainGroup.rotation.y += 0.002;
+            // Only auto-rotate if not being dragged
+            if (state.mode === 'TREE' && !isDragging && state.inputMode === 'TOUCH') {
+                 mainGroup.rotation.y += 0.002;
             }
 
             orbitGroup.rotation.y = time * -0.1; orbitGroup.rotation.z = Math.sin(time*0.5) * 0.05;
@@ -750,16 +753,20 @@
             });
 
             photoParticles.forEach(p => { p.mesh.lookAt(camera.position); });
-            particles.forEach(p => { 
-                if(p.type === 'dust') p.mesh.scale.multiplyScalar(1 + Math.sin(time * 5 + p.treePos.x)*0.005); 
+            particles.forEach(p => { 
+                if(p.type === 'dust') p.mesh.scale.multiplyScalar(1 + Math.sin(time * 5 + p.treePos.x)*0.005); 
             });
 
             composer.render();
         }
 
+        // --- 11. UPLOAD FIX ---
         window.handlePhotoUpload = (input) => {
             if(!input.files.length) return;
             Array.from(input.files).forEach(file => {
+                // simple check for image type just in case
+                if (!file.type.startsWith('image/')) return;
+
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const tex = new THREE.TextureLoader().load(e.target.result);
@@ -767,15 +774,15 @@
                     state.album[state.uploadIndex % config.photoCount] = tex;
                     const slot = photoParticles[state.uploadIndex % config.photoCount];
                     if(slot && slot.mesh) {
-                        slot.mesh.material.map = tex; 
+                        slot.mesh.material.map = tex; 
                         slot.mesh.material.needsUpdate = true;
-                        slot.mesh.material.color.setHex(config.photoBrightness); 
+                        slot.mesh.material.color.setHex(config.photoBrightness); 
                     }
                     state.uploadIndex++;
                 };
                 reader.readAsDataURL(file);
             });
-            alert("🎉 照片已加载！");
+            alert("🎉 已导入 " + input.files.length + " 张照片！");
         };
 
         window.addEventListener('resize', () => {
