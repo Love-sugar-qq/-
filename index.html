@@ -21,10 +21,8 @@
             opacity: 0; transition: opacity 1s; pointer-events: none;
         }
         
-        /* 允许交互的区域 */
         .top-bar, .controls, #lock-screen { pointer-events: auto; }
 
-        /* 密码锁屏 */
         #lock-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             background: #000; z-index: 9999;
@@ -42,7 +40,6 @@
             border-radius: 50px; font-weight: bold; cursor: pointer;
         }
         .error-msg { color: red; font-size: 12px; margin-top: 10px; height: 15px; }
-        /* 加载进度提示 */
         #loading-text { margin-top: 20px; font-size: 12px; color: #aaa; letter-spacing: 1px; }
 
         .top-bar { display: flex; justify-content: flex-end; align-items: flex-start; }
@@ -67,7 +64,7 @@
         
         .controls { 
             text-align: center; margin-bottom: 15px; 
-            display: flex; justify-content: center; gap: 8px; 
+            display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
         }
         .btn-main {
             background: linear-gradient(135deg, #FF1493, #FFD700);
@@ -78,6 +75,11 @@
         .btn-sub {
             background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
             color: #ccc; padding: 10px 12px; font-size: 11px; border-radius: 50px; backdrop-filter: blur(5px);
+        }
+        /* 修复旋转按钮样式 */
+        .btn-fix {
+            background: rgba(50, 50, 50, 0.6); border: 1px solid #FFD700;
+            color: #FFD700; padding: 10px 12px; font-size: 11px; border-radius: 50px; backdrop-filter: blur(5px);
         }
         
         #btn-folder-upload { display: none; }
@@ -117,7 +119,9 @@
         </div>
         
         <div class="controls">
-            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 导入照片(多选)</button>
+            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 照片(多选)</button>
+            <button class="btn-fix" onclick="rotateAllPhotos()">🔄 旋转方向</button>
+            
             <button class="btn-main" id="btn-folder-upload" onclick="document.getElementById('folder-input').click()">+ 文件夹</button>
             <button class="btn-sub" id="btn-shake" style="display:none;" onclick="requestMotion()">⚡ 摇一摇</button>
             
@@ -125,7 +129,7 @@
             <input type="file" id="folder-input" webkitdirectory directory multiple onchange="handlePhotoUpload(this)">
         </div>
         
-        <div id="status">v47.0 Turbo Mode</div>
+        <div id="status">v48.0 Orientation Fix</div>
     </div>
 
     <div id="canvas-container"></div>
@@ -152,19 +156,13 @@
         function checkPassword() {
             const input = document.getElementById('password-input').value;
             if (input === CORRECT_PASSWORD) {
-                // UI Feedback
-                document.getElementById('loading-text').innerText = "极速加载回忆中...";
+                document.getElementById('loading-text').innerText = "正在尝试极速加载...";
                 const lockScreen = document.getElementById('lock-screen');
                 const uiLayer = document.getElementById('ui-layer');
-                
-                // Unlock immediately
                 lockScreen.style.opacity = 0;
                 setTimeout(() => lockScreen.style.display = 'none', 800);
                 uiLayer.style.opacity = 1;
-                
-                // Start Turbo Load
-                preloadPhotosTurbo();
-                
+                preloadPhotosTurbo(); 
                 if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                     document.getElementById('btn-shake').style.display = 'block';
                 }
@@ -304,7 +302,6 @@
             const r = radius * (0.4 + Math.random() * 0.8);
             return new THREE.Vector3(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
         }
-        
         function getCircleTexture() {
             const canvas = document.createElement('canvas'); canvas.width = 32; canvas.height = 32;
             const context = canvas.getContext('2d');
@@ -457,25 +454,25 @@
         function preloadPhotosTurbo() {
             let loadedCount = 0;
             const statusEl = document.getElementById('status');
-            const loadingText = document.getElementById('loading-text'); // If lock screen still visible
-
+            
             for(let i = 1; i <= TOTAL_PRELOAD_IMAGES; i++) {
                 const imgUrl = `${SECRET_FOLDER}/${i}.jpg`;
                 
-                // Fetch -> Blob -> Bitmap (Backgroud Thread)
                 fetch(imgUrl)
                     .then(res => {
                         if (!res.ok) throw new Error("404");
                         return res.blob();
                     })
                     .then(blob => createImageBitmap(blob, { 
-                        // Downscale to 256x256 for speed & memory
                         resizeWidth: 256, resizeHeight: 256, resizeQuality: 'medium' 
                     }))
                     .then(bitmap => {
                         const tex = new THREE.CanvasTexture(bitmap);
                         tex.encoding = THREE.sRGBEncoding;
-                        // Important: Free memory when updated
+                        
+                        // 【关键修正】: 解决图片倒置问题
+                        tex.flipY = false; 
+
                         tex.onUpdate = () => { bitmap.close(); }; 
 
                         const slotIndex = (i - 1) % config.photoCount;
@@ -487,17 +484,30 @@
                             slot.mesh.material.needsUpdate = true;
                             slot.mesh.material.color.setHex(config.photoBrightness);
                         }
-                        
                         loadedCount++;
                         if(statusEl) statusEl.innerText = `Loaded: ${loadedCount}/${TOTAL_PRELOAD_IMAGES}`;
                     })
-                    .catch(err => { 
-                        // console.log("Missing:", imgUrl); 
-                    });
+                    .catch(err => { });
             }
         }
 
-        // --- INTERACTIONS ---
+        // --- ★★★ 旋转修复逻辑 ★★★ ---
+        window.rotateAllPhotos = () => {
+            // 每次点击旋转 90 度
+            state.album.forEach(tex => {
+                if(tex && tex.center) {
+                    tex.center.set(0.5, 0.5);
+                    tex.rotation = (tex.rotation || 0) + Math.PI / 2;
+                }
+            });
+            // 也要旋转 HUD 的预览
+            if(hudMesh.material.map) {
+                hudMesh.material.map.center.set(0.5, 0.5);
+                hudMesh.material.map.rotation = (hudMesh.material.map.rotation || 0) + Math.PI / 2;
+            }
+            alert("🔄 所有照片已旋转 90°，再次点击可继续旋转。");
+        };
+
         function transitionTo(newState) {
             if(state.mode === newState) return;
             state.mode = newState;
@@ -658,6 +668,7 @@
                 .then(bitmap => {
                     const tex = new THREE.CanvasTexture(bitmap);
                     tex.encoding = THREE.sRGBEncoding;
+                    tex.flipY = false; // Fix manual upload rotation too
                     tex.onUpdate = () => { bitmap.close(); };
                     state.album[state.uploadIndex % config.photoCount] = tex;
                     const slot = photoParticles[state.uploadIndex % config.photoCount];
