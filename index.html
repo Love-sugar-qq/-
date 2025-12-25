@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>For QingQing Only ❤️</title>
+    <title>For QingQing ❤️</title>
     <style>
         /* 基础设置 */
         body { 
@@ -18,14 +18,21 @@
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;
             display: flex; flex-direction: column; justify-content: space-between; padding: 10px; box-sizing: border-box;
-            /* 默认隐藏UI，解锁后显示 */
-            opacity: 0; transition: opacity 1s; pointer-events: none;
+            opacity: 0; transition: opacity 1s;
         }
         
+        /* 调试控制台 (用于查看手机报错) */
+        #debug-console {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.8); z-index: 20000; color: #0f0; 
+            font-family: monospace; font-size: 10px; padding: 10px; 
+            overflow-y: auto; pointer-events: none; display: none;
+        }
+
         /* 密码锁屏层 */
         #lock-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: #000; z-index: 9999;
+            background: #000; z-index: 9999; pointer-events: auto;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             color: #FFD700; transition: opacity 0.8s;
         }
@@ -41,7 +48,6 @@
         }
         .error-msg { color: red; font-size: 12px; margin-top: 10px; height: 15px; }
 
-        /* UI 元素样式 */
         .top-bar { display: flex; justify-content: flex-end; align-items: flex-start; pointer-events: auto; }
         .mode-switch {
             background: rgba(255,255,255,0.15); backdrop-filter: blur(5px);
@@ -77,8 +83,10 @@
             color: #ccc; padding: 10px 12px; font-size: 11px; border-radius: 50px; backdrop-filter: blur(5px);
         }
         
+        /* 仅在宽屏(电脑)显示文件夹按钮 */
         #btn-folder-upload { display: none; }
         @media (min-width: 768px) { #btn-folder-upload { display: inline-block; } }
+        
         #file-input, #folder-input { display: none; }
         #status { position: absolute; bottom: 5px; left: 10px; color: rgba(255,255,255,0.2); font-size: 9px; }
         #input_video { display: none; }
@@ -86,11 +94,14 @@
 </head>
 <body>
 
+    <div id="debug-console">DEBUG MODE STARTED...<br></div>
+
     <div id="lock-screen">
         <div class="lock-title">🎄 FOR QINGQING ❤️</div>
         <input type="password" id="password-input" class="lock-input" placeholder="输入我们的纪念日">
         <button class="lock-btn" onclick="checkPassword()">开启惊喜</button>
         <div class="error-msg" id="error-msg"></div>
+        <div style="font-size:10px; color:#333; margin-top:50px;">v44.0 Debug</div>
     </div>
 
     <video id="input_video" autoplay playsinline></video>
@@ -112,7 +123,7 @@
         </div>
         
         <div class="controls">
-            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 补充照片</button>
+            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 导入照片(多选)</button>
             <button class="btn-main" id="btn-folder-upload" onclick="document.getElementById('folder-input').click()">+ 文件夹</button>
             <button class="btn-sub" id="btn-shake" style="display:none;" onclick="requestMotion()">⚡ 摇一摇</button>
             
@@ -120,12 +131,12 @@
             <input type="file" id="folder-input" webkitdirectory directory multiple onchange="handlePhotoUpload(this)">
         </div>
         
-        <div id="status">v43.0 Privacy Locked</div>
+        <div id="status">v44.0 Stable</div>
     </div>
 
     <div id="canvas-container"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
@@ -139,29 +150,42 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <script>
-        // --- 0. PRIVACY CONFIG & LOCK ---
-        
-        // ★★★ 请在这里设置你的密码和乱码文件夹名 ★★★
-        const CORRECT_PASSWORD = "0319";  // 设置一个只有你们知道的数字
-        const SECRET_FOLDER = "secret_love_hxq"; // 上传到GitHub的文件夹名字，不要用 'photos'
+        // --- ERROR LOGGING ---
+        const debugConsole = document.getElementById('debug-console');
+        function logErr(msg) {
+            console.error(msg);
+            // 只有当 URL 里包含 ?debug=true 时才显示控制台，避免影响美观
+            if(window.location.search.includes('debug')) {
+                debugConsole.style.display = 'block';
+                debugConsole.innerHTML += `<div style="color:red;">> ${msg}</div>`;
+            }
+        }
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            logErr(`Error: ${msg} at line ${lineNo}`);
+            return false;
+        };
+
+        // --- 0. PRIVACY & LOCK ---
+        const CORRECT_PASSWORD = "0319"; 
+        // 确保这个文件夹名和你 GitHub 仓库里的一模一样（区分大小写！）
+        const SECRET_FOLDER = "secret_love_hxq"; 
         const TOTAL_PRELOAD_IMAGES = 80;
 
         function checkPassword() {
             const input = document.getElementById('password-input').value;
             if (input === CORRECT_PASSWORD) {
-                // Unlock
                 const lockScreen = document.getElementById('lock-screen');
                 const uiLayer = document.getElementById('ui-layer');
-                
                 lockScreen.style.opacity = 0;
                 setTimeout(() => {
                     lockScreen.style.display = 'none';
-                    uiLayer.style.pointerEvents = 'auto'; // Enable UI
+                    uiLayer.style.pointerEvents = 'auto';
                     uiLayer.style.opacity = 1;
                     
-                    // Start loading secret photos ONLY after unlock
+                    // 尝试加载图片
                     preloadPhotos(); 
                     
+                    // 检查加速度计权限
                     if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                         document.getElementById('btn-shake').style.display = 'block';
                     }
@@ -209,6 +233,11 @@
         resetDeck();
 
         // --- 2. THREE.JS SETUP ---
+        if (typeof THREE === 'undefined') {
+            logErr("THREE.js failed to load. Check network.");
+            alert("错误：资源加载失败，请刷新重试或检查网络。");
+        }
+
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x020202, 0.003);
@@ -234,12 +263,20 @@
         secondaryLight.position.set(-30, 20, -40);
         scene.add(secondaryLight);
 
-        const renderScene = new THREE.RenderPass(scene, camera);
-        const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
-        bloomPass.threshold = 0.15; bloomPass.strength = 1.5; bloomPass.radius = 0.7;
-        const composer = new THREE.EffectComposer(renderer);
-        composer.addPass(renderScene);
-        composer.addPass(bloomPass);
+        // Fail-safe Bloom
+        let composer;
+        try {
+            const renderScene = new THREE.RenderPass(scene, camera);
+            const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+            bloomPass.threshold = 0.15; bloomPass.strength = 1.5; bloomPass.radius = 0.7;
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+        } catch(e) {
+            logErr("Bloom failed to init: " + e.message);
+            // Fallback to basic renderer if PostProcessing fails
+            composer = null;
+        }
 
         const mainGroup = new THREE.Group(); scene.add(mainGroup); 
         const staticGroup = new THREE.Group(); scene.add(staticGroup); 
@@ -266,6 +303,7 @@
         const borderMesh = new THREE.Mesh(borderGeo, borderMat);
         borderMesh.position.set(0, 0, -15.1); borderMesh.renderOrder = 9998; hudGroup.add(borderMesh);
 
+        // Assets
         const geoSphere = new THREE.IcosahedronGeometry(0.8, 1);
         const geoBox = new THREE.BoxGeometry(1.2, 1.2, 1.2);
         const geoTorus = new THREE.TorusGeometry(0.7, 0.25, 12, 24);
@@ -299,18 +337,7 @@
             const r = radius * (0.4 + Math.random() * 0.8);
             return new THREE.Vector3(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi));
         }
-        function getDeepBackgroundPos(minDist = 40) {
-            let pos, tooClose;
-            let attempts = 0;
-            const bgTextPositions = [];
-            do {
-                pos = new THREE.Vector3((Math.random()-0.5)*280, (Math.random()-0.5)*160+20, -80-Math.random()*150);
-                tooClose = bgTextPositions.some(existingPos => existingPos.distanceTo(pos) < minDist);
-                attempts++;
-            } while (tooClose && attempts < 50);
-            bgTextPositions.push(pos);
-            return pos;
-        }
+        
         function getCircleTexture() {
             const canvas = document.createElement('canvas'); canvas.width = 32; canvas.height = 32;
             const context = canvas.getContext('2d');
@@ -324,6 +351,7 @@
         }
         const circleTex = getCircleTexture();
 
+        // Particles Generation
         (function createTopTextParticles() {
             const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 256;
             const ctx = canvas.getContext('2d');
@@ -374,6 +402,7 @@
             particles.push({mesh, treePos, scatterPos:getScatterPos(120), type:'dust', originalScale:mesh.scale.clone()});
         }
         
+        // Orbit & BG
         const orbitGeoSys=new THREE.BufferGeometry(); const orbitPosArr=[]; const orbitColArr=[];
         const orbitColors=[new THREE.Color(config.colors.gold), new THREE.Color(config.colors.pink), new THREE.Color(config.colors.blue)];
         for(let i=0; i<config.orbitDustCount; i++) {
@@ -391,7 +420,10 @@
         const bgGeo=new THREE.BufferGeometry(); const bgPos=[]; const bgCols=[];
         const bgBaseCols=[new THREE.Color(config.colors.pink), new THREE.Color(config.colors.purple), new THREE.Color(config.colors.blue)];
         for(let i=0; i<config.bgDustCount; i++) {
-            const p=getDeepBackgroundPos(5); 
+            const r = 200 * Math.random();
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
+            bgPos.push(r*Math.sin(phi)*Math.cos(theta), r*Math.sin(phi)*Math.sin(theta), r*Math.cos(phi) - 100);
             const c=bgBaseCols[Math.floor(Math.random()*bgBaseCols.length)];
             bgCols.push(c.r*1.3, c.g*1.3, c.b*1.3);
         }
@@ -415,7 +447,8 @@
             const tex=createTextTexture(text, '#FF88C2');
             const mat=new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending, depthWrite:false});
             const geo=new THREE.PlaneGeometry(40, 10); const mesh=new THREE.Mesh(geo, mat);
-            mesh.position.copy(getDeepBackgroundPos(50)); mesh.lookAt(camera.position); staticGroup.add(mesh);
+            mesh.position.set((Math.random()-0.5)*300, (Math.random()-0.5)*200, -150); 
+            mesh.lookAt(camera.position); staticGroup.add(mesh);
         });
         const heartShape=new THREE.Shape();
         heartShape.moveTo(25, 25); heartShape.bezierCurveTo(25, 25, 20, 0, 0, 0); heartShape.bezierCurveTo(-30, 0, -30, 35, -30, 35);
@@ -425,27 +458,11 @@
         const heartMat=new THREE.MeshBasicMaterial({color:new THREE.Color(config.colors.yellow).multiplyScalar(1.2), transparent:true, opacity:0.7, blending: THREE.AdditiveBlending});
         for(let i=0; i<config.heartCount; i++) {
             const mesh=new THREE.Mesh(heartGeo, heartMat);
-            mesh.position.copy(getDeepBackgroundPos(20)); mesh.scale.setScalar(0.02+Math.random()*0.02);
+            mesh.position.set((Math.random()-0.5)*200, (Math.random()-0.5)*200, -100); 
+            mesh.scale.setScalar(0.02+Math.random()*0.02);
             mesh.rotation.z=(Math.random()-0.5)*0.5; heartGroup.add(mesh);
             mesh.userData.baseScale=mesh.scale.x; mesh.userData.pulseOffset=Math.random()*Math.PI*2;
         }
-        function createConstellation(stars, connections, colorHex, position) {
-            const group=new THREE.Group(); group.position.copy(position);
-            const starGeo=new THREE.BufferGeometry(); const starPos=[]; stars.forEach(s=>starPos.push(s.x, s.y, s.z));
-            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-            const brightColor = new THREE.Color(colorHex).multiplyScalar(1.5);
-            group.add(new THREE.Points(starGeo, new THREE.PointsMaterial({color:brightColor, size:1.8, transparent:true, opacity:1.0, blending:THREE.AdditiveBlending})));
-            const lineMat=new THREE.LineBasicMaterial({color:brightColor, transparent:true, opacity:0.6, blending:THREE.AdditiveBlending});
-            connections.forEach(pair => { group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([stars[pair[0]], stars[pair[1]]]), lineMat)); });
-            group.userData.floatOffset=Math.random()*Math.PI*2; group.userData.floatSpeed=0.2+Math.random()*0.3;
-            constellationGroup.add(group);
-        }
-        const libraStars=[new THREE.Vector3(0, 10, 0), new THREE.Vector3(-8, 2, 0), new THREE.Vector3(8, 2, 0), new THREE.Vector3(-5, -8, 0), new THREE.Vector3(5, -8, 0)];
-        const libraConns=[[0,1], [0,2], [1,3], [2,4], [1,2]];
-        createConstellation(libraStars, libraConns, config.colors.libraGold, getDeepBackgroundPos(60));
-        const aquaStars=[new THREE.Vector3(0, 12, 0), new THREE.Vector3(-4, 8, 0), new THREE.Vector3(4, 8, 0), new THREE.Vector3(0, 2, 0), new THREE.Vector3(-6, -4, 0), new THREE.Vector3(6, -4, 0), new THREE.Vector3(-2, -8, 0), new THREE.Vector3(2, -10, 0), new THREE.Vector3(-3, -14, 0), new THREE.Vector3(1, -16, 0)];
-        const aquaConns=[[0,1], [0,2], [1,3], [2,3], [3,4], [3,5], [4,6], [6,7], [7,8], [8,9]];
-        createConstellation(aquaStars, aquaConns, config.colors.aquaBlue, getDeepBackgroundPos(60));
 
         function createPlaceholderTexture(index) {
             const cvs=document.createElement('canvas'); cvs.width=300; cvs.height=400; const cx=cvs.getContext('2d');
@@ -471,10 +488,9 @@
             particles.push(pObj); photoParticles.push(pObj);
         }
 
-        // --- ★★★ AUTO LOAD FROM SECRET FOLDER ★★★ ---
+        // --- ★★★ SAFER PRELOAD ★★★ ---
         function preloadPhotos() {
             const loader = new THREE.TextureLoader();
-            // Use the SECRET_FOLDER variable here
             for(let i = 1; i <= TOTAL_PRELOAD_IMAGES; i++) {
                 loader.load(
                     `${SECRET_FOLDER}/${i}.jpg`, 
@@ -490,7 +506,9 @@
                         }
                     },
                     undefined,
-                    (err) => { }
+                    (err) => { 
+                        // Just ignore missing photos, don't crash
+                    }
                 );
             }
         }
@@ -718,6 +736,36 @@
             renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
         });
 
+        // Animation Loop
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            if (state.mode !== 'TREE' && !state.leftHandPinching) mainGroup.rotation.y += 0.001;
+            else if (state.mode === 'TREE') { 
+                if(!isDragging && state.inputMode === 'TOUCH') mainGroup.rotation.y += 0.002;
+            }
+
+            orbitGroup.rotation.y = time * -0.1; orbitGroup.rotation.z = Math.sin(time*0.5) * 0.05;
+            topStar.rotation.y = time * 1.5;
+            
+            heartGroup.children.forEach(h => {
+                const scale = h.userData.baseScale * (1 + Math.sin(time * 3 + h.userData.pulseOffset) * 0.2);
+                h.scale.setScalar(scale);
+            });
+            constellationGroup.children.forEach(c => {
+                 c.position.y += Math.sin(time * c.userData.floatSpeed + c.userData.floatOffset) * 0.05;
+            });
+
+            photoParticles.forEach(p => { p.mesh.lookAt(camera.position); });
+            particles.forEach(p => { 
+                if(p.type === 'dust') p.mesh.scale.multiplyScalar(1 + Math.sin(time * 5 + p.treePos.x)*0.005); 
+            });
+
+            if(composer) composer.render();
+            else renderer.render(scene, camera);
+        }
         animate();
     </script>
 </body>
