@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Magical Christmas - Beautified v37</title>
+    <title>Magical Christmas - Compact Tree v38</title>
     <style>
         /* 基础设置 */
         body { 
@@ -70,7 +70,6 @@
             box-shadow: 0 4px 10px rgba(255, 20, 147, 0.4); font-weight: bold;
             white-space: nowrap;
         }
-        /* 摇一摇按钮 */
         .btn-sub {
             background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
             color: #ccc; padding: 10px 12px; font-size: 11px; border-radius: 50px;
@@ -97,7 +96,7 @@
 
     <div id="loader">
         <div class="spinner"></div>
-        <div style="font-size: 10px; letter-spacing: 2px; opacity: 0.8;">BEAUTIFYING...</div>
+        <div style="font-size: 10px; letter-spacing: 2px; opacity: 0.8;">TIGHTENING...</div>
     </div>
 
     <video id="input_video" autoplay playsinline></video>
@@ -126,7 +125,7 @@
             <input type="file" id="folder-input" webkitdirectory directory multiple onchange="handlePhotoUpload(this)">
         </div>
         
-        <div id="status">v37.0 Beautified Tree</div>
+        <div id="status">v38.0 Compact & Dense</div>
     </div>
 
     <div id="canvas-container"></div>
@@ -159,11 +158,10 @@
             }
         });
 
-        // --- 1. CONFIGURATION (Beautified) ---
+        // --- 1. CONFIGURATION (COMPACT & DENSE) ---
         const isMobile = window.innerWidth < 768; 
 
         const config = {
-            // Increased density slightly for better looks, still manageable for mobile
             decoCount: isMobile ? 800 : 1500, 
             treeDustCount: isMobile ? 1000 : 2500,
             rootDustCount: isMobile ? 300 : 800,
@@ -180,9 +178,9 @@
                 pink: 0xFF88C2, purple: 0xB090FF, blue: 0x33CCFF, yellow: 0xFFFF66,
                 libraGold: 0xFFE55C, aquaBlue: 0x33CCFF
             },
-            // Taller and wider base for a fuller look
-            treeHeight: 90, 
-            treeRadius: isMobile ? 40 : 50, 
+            // 【调整重点】: 降低高度，大幅减小半径，实现"密集"效果
+            treeHeight: 80, // Slightly shorter
+            treeRadius: isMobile ? 25 : 35, // Significantly narrower (was 40/50)
             scatterRadius: 120
         };
 
@@ -210,9 +208,9 @@
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x020202, 0.003);
 
-        // Back to standard FOV, closer camera for better perspective
+        // Adjust Camera to fit the tighter tree
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 10, isMobile ? 150 : 130);
+        camera.position.set(0, 10, isMobile ? 140 : 120); // Closer camera
         camera.lookAt(0,0,0);
         scene.add(camera);
 
@@ -266,7 +264,7 @@
         const borderMesh = new THREE.Mesh(borderGeo, borderMat);
         borderMesh.position.set(0, 0, -15.1); borderMesh.renderOrder = 9998; hudGroup.add(borderMesh);
 
-        // --- 5. ASSETS & PARTICLES ---
+        // --- 5. ASSETS ---
         const geoSphere = new THREE.IcosahedronGeometry(0.8, 1);
         const geoBox = new THREE.BoxGeometry(1.2, 1.2, 1.2);
         const geoTorus = new THREE.TorusGeometry(0.7, 0.25, 12, 24);
@@ -281,30 +279,22 @@
         const particles = [];
         const photoParticles = []; 
         
-        // --- CORE BEAUTIFICATION LOGIC ---
-        // Use Golden Angle for natural spiral distribution
+        // --- CORE LOGIC: COMPACT TREE ---
         const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 
         function getTreePos(i, total, radiusMod = 1, heightMod = 1, hOffset = 0) {
             const h = config.treeHeight * heightMod;
-            // Normalize index (0 to 1)
             const t = i / total;
-
-            // Vertical Position (Y): Distribute slightly more towards the bottom for fullness
             const y = h * (t - 0.5) + hOffset;
 
-            // Radius Profile (Curve): Use a power curve instead of linear for a natural droop
-            // Math.pow(1-t, 0.8) makes it slightly convex (fuller body)
+            // Tighter Curve
             const progressFromTop = 1 - t;
-            let rProfile = Math.pow(progressFromTop, 0.8) * config.treeRadius * radiusMod;
-            // Add a slight minimum radius at top so it's not needle-sharp
-            rProfile += 0.5;
+            let rProfile = Math.pow(progressFromTop, 0.85) * config.treeRadius * radiusMod; // 0.85 power for tighter top
+            rProfile += 0.5; // Min radius
 
-            // Spiral Angle (Phyllotaxis packing)
             const angle = i * goldenAngle;
-            
-            // Add some random jitter so it's not perfectly mathematical
-            const jitterRadius = rProfile + (Math.random() - 0.5) * 2.5;
+            // Less random jitter for more uniform look
+            const jitterRadius = rProfile + (Math.random() - 0.5) * 1.5; 
 
             return new THREE.Vector3(
                 Math.cos(angle) * jitterRadius,
@@ -381,8 +371,8 @@
             else if(r>0.4) mesh=new THREE.Mesh(geoSphere, matGreenD);
             else mesh=new THREE.Mesh(geoSphere, matGreenL);
             const treePos=getTreePos(i, config.decoCount);
-            // Less random jitter for cleaner look
-            treePos.x+=(Math.random()-0.5)*1.5; treePos.z+=(Math.random()-0.5)*1.5;
+            // Tight packing
+            treePos.x+=(Math.random()-0.5)*1.0; treePos.z+=(Math.random()-0.5)*1.0;
             mesh.position.copy(treePos); mesh.scale.setScalar(Math.random()*0.7+0.6);
             mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
             mainGroup.add(mesh);
@@ -391,7 +381,7 @@
         for(let i=0; i<config.treeDustCount; i++) {
             const mesh=new THREE.Mesh(geoDust, matDustGold);
             const treePos=getTreePos(i, config.treeDustCount, 1.0, 1.05); 
-            treePos.x+=(Math.random()-0.5)*3; treePos.y+=(Math.random()-0.5)*2; treePos.z+=(Math.random()-0.5)*3;
+            treePos.x+=(Math.random()-0.5)*2; treePos.y+=(Math.random()-0.5)*2; treePos.z+=(Math.random()-0.5)*2;
             mesh.position.copy(treePos); mesh.scale.setScalar(Math.random()*0.5+0.2); mainGroup.add(mesh);
             particles.push({mesh, treePos, scatterPos:getScatterPos(120), type:'dust', originalScale:mesh.scale.clone()});
         }
@@ -554,14 +544,12 @@
 
         // --- 8. INTERACTIONS (TOUCH & SHAKE) ---
         
-        // Mode Switcher
         window.setMode = (mode) => {
             state.inputMode = mode;
             const btns = document.querySelectorAll('.mode-btn');
             btns.forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
             
-            // Re-init Logic
             if(mode === 'HANDS') {
                 cameraUtils.start().catch(e => console.log("Cam error", e));
             } else {
@@ -569,7 +557,6 @@
             }
         };
 
-        // Shake Detection
         let lastX, lastY, lastZ;
         let lastShakeTime = 0;
         const shakeThreshold = 15;
@@ -581,19 +568,15 @@
                 }).catch(console.error);
             }
         }
-        
         function handleMotion(e) {
             if(state.inputMode !== 'TOUCH') return;
             const acc = e.accelerationIncludingGravity;
             if(!acc) return;
-            
             const now = Date.now();
-            if(now - lastShakeTime < 1500) return; // Debounce
-
+            if(now - lastShakeTime < 1500) return; 
             const deltaX = Math.abs(acc.x - lastX);
             const deltaY = Math.abs(acc.y - lastY);
             const deltaZ = Math.abs(acc.z - lastZ);
-
             if(deltaX + deltaY + deltaZ > shakeThreshold) {
                 if(!state.isInspecting) {
                     showRandomPhoto();
@@ -616,21 +599,18 @@
         touchSurface.addEventListener('touchstart', (e) => {
             if(state.inputMode !== 'TOUCH') return;
             
-            // 1 Finger: Click or Drag
             if (e.touches.length === 1) {
                 const now = Date.now();
                 isDragging = true;
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
 
-                // Double Tap (Scatter)
                 if (now - lastTapTime < 300) {
                     if(state.mode === 'TREE') transitionTo('SCATTER');
                     else transitionTo('TREE');
                 }
                 lastTapTime = now;
             }
-            // 2 Fingers: Pinch Start
             else if (e.touches.length === 2) {
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -640,29 +620,25 @@
 
         touchSurface.addEventListener('touchmove', (e) => {
             if(state.inputMode !== 'TOUCH') return;
-            e.preventDefault(); // Prevent scrolling
+            e.preventDefault(); 
 
-            // 1 Finger: Rotate (XYZ 360)
             if (e.touches.length === 1 && isDragging) {
                 const deltaX = e.touches[0].clientX - lastTouchX;
                 const deltaY = e.touches[0].clientY - lastTouchY;
                 
-                mainGroup.rotation.y += deltaX * 0.005; // Drag Left/Right -> Spin Y
-                mainGroup.rotation.x += deltaY * 0.005; // Drag Up/Down -> Flip X
+                mainGroup.rotation.y += deltaX * 0.005; 
+                mainGroup.rotation.x += deltaY * 0.005; 
 
                 lastTouchX = e.touches[0].clientX;
                 lastTouchY = e.touches[0].clientY;
             }
-            // 2 Fingers: Pinch (Gather)
             else if (e.touches.length === 2 && initialPinchDist) {
                 const dx = e.touches[0].clientX - e.touches[1].clientX;
                 const dy = e.touches[0].clientY - e.touches[1].clientY;
                 const currentDist = Math.sqrt(dx*dx + dy*dy);
-                
-                // If pinching IN (distance getting smaller) -> Tree
                 if (currentDist < initialPinchDist - 50) { 
                     transitionTo('TREE');
-                    initialPinchDist = null; // Consume event
+                    initialPinchDist = null; 
                 }
             }
         }, {passive: false});
@@ -672,23 +648,17 @@
             isDragging = false;
             initialPinchDist = null;
 
-            // Tap Logic (Click to Inspect)
-            // If it was a quick tap without much movement
             if (e.changedTouches.length === 1) {
-                // Raycast
                 const touch = e.changedTouches[0];
                 mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
                 mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
                 
                 raycaster.setFromCamera(mouse, camera);
                 
-                // If viewing photo, close it
                 if (state.isInspecting) {
                     closePhoto();
                     return;
                 }
-
-                // Check intersection with photos
                 const intersects = raycaster.intersectObjects(photoParticles.map(p => p.mesh));
                 if (intersects.length > 0) {
                     const id = intersects[0].object.userData.id;
@@ -697,7 +667,7 @@
             }
         });
 
-        // --- 9. MEDIAPIPE (HANDS MODE) ---
+        // --- 9. MEDIAPIPE ---
         function onResults(results) {
             if(state.inputMode !== 'HANDS') return;
             let rightHand = null, leftHand = null;
@@ -763,9 +733,9 @@
             requestAnimationFrame(animate);
             const time = clock.getElapsedTime();
 
-            // Only auto-rotate if not being dragged
-            if (state.mode === 'TREE' && !isDragging && state.inputMode === 'TOUCH') {
-                 mainGroup.rotation.y += 0.002;
+            if (state.mode !== 'TREE' && !state.leftHandPinching) mainGroup.rotation.y += 0.001;
+            else if (state.mode === 'TREE') { 
+                if(!isDragging && state.inputMode === 'TOUCH') mainGroup.rotation.y += 0.002;
             }
 
             orbitGroup.rotation.y = time * -0.1; orbitGroup.rotation.z = Math.sin(time*0.5) * 0.05;
@@ -787,13 +757,10 @@
             composer.render();
         }
 
-        // --- 11. UPLOAD FIX ---
         window.handlePhotoUpload = (input) => {
             if(!input.files.length) return;
             Array.from(input.files).forEach(file => {
-                // simple check for image type just in case
                 if (!file.type.startsWith('image/')) return;
-
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const tex = new THREE.TextureLoader().load(e.target.result);
