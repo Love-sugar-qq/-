@@ -5,34 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>For QingQing ❤️</title>
     <style>
-        /* 基础设置 */
+        /* --- 基础设置 --- */
         body { 
             margin: 0; overflow: hidden; background-color: #020202; 
             font-family: 'Helvetica Neue', sans-serif;
-            touch-action: none; 
+            touch-action: none; /* 禁止浏览器默认缩放 */
             -webkit-user-select: none; user-select: none;
             -webkit-touch-callout: none;
         }
         #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         
+        /* --- UI 层 (关键修改：pointer-events: none 让触摸穿透) --- */
         #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;
-            display: flex; flex-direction: column; justify-content: space-between; padding: 10px; box-sizing: border-box;
-            opacity: 0; transition: opacity 1s;
-        }
-        
-        /* 调试控制台 (用于查看手机报错) */
-        #debug-console {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.8); z-index: 20000; color: #0f0; 
-            font-family: monospace; font-size: 10px; padding: 10px; 
-            overflow-y: auto; pointer-events: none; display: none;
+            z-index: 10;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 10px; box-sizing: border-box;
+            opacity: 0; transition: opacity 1s; 
+            pointer-events: none; /* 让点击穿透空白区域 */
         }
 
-        /* 密码锁屏层 */
+        /* --- 只有按钮和输入框才允许点击 --- */
+        .top-bar, .controls, #lock-screen { pointer-events: auto; }
+
+        /* 密码锁屏 */
         #lock-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: #000; z-index: 9999; pointer-events: auto;
+            background: #000; z-index: 9999;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             color: #FFD700; transition: opacity 0.8s;
         }
@@ -48,7 +46,8 @@
         }
         .error-msg { color: red; font-size: 12px; margin-top: 10px; height: 15px; }
 
-        .top-bar { display: flex; justify-content: flex-end; align-items: flex-start; pointer-events: auto; }
+        /* 顶部栏 */
+        .top-bar { display: flex; justify-content: flex-end; align-items: flex-start; }
         .mode-switch {
             background: rgba(255,255,255,0.15); backdrop-filter: blur(5px);
             border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; padding: 3px; display: flex; gap: 3px;
@@ -59,17 +58,20 @@
         }
         .mode-btn.active { background: #FF1493; color: white; }
 
+        /* 提示框 */
         #guide {
             position: absolute; bottom: 85px; left: 10px; width: 110px; 
             color: rgba(255,255,255,0.7); font-size: 10px; line-height: 1.4;
             background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;
-            border-left: 2px solid #FFD700; pointer-events: none;
+            border-left: 2px solid #FFD700; 
+            pointer-events: none; /* 提示框本身不挡手 */
         }
         .key { color: #FFD700; font-weight: bold; }
         .guide-row { margin-bottom: 2px; }
         
+        /* 底部按钮区 */
         .controls { 
-            pointer-events: auto; text-align: center; margin-bottom: 15px; 
+            text-align: center; margin-bottom: 15px; 
             display: flex; justify-content: center; gap: 8px; 
         }
         .btn-main {
@@ -83,25 +85,27 @@
             color: #ccc; padding: 10px 12px; font-size: 11px; border-radius: 50px; backdrop-filter: blur(5px);
         }
         
-        /* 仅在宽屏(电脑)显示文件夹按钮 */
         #btn-folder-upload { display: none; }
         @media (min-width: 768px) { #btn-folder-upload { display: inline-block; } }
         
         #file-input, #folder-input { display: none; }
-        #status { position: absolute; bottom: 5px; left: 10px; color: rgba(255,255,255,0.2); font-size: 9px; }
+        #status { position: absolute; bottom: 5px; left: 10px; color: rgba(255,255,255,0.4); font-size: 9px; pointer-events: none; }
         #input_video { display: none; }
+
+        /* 加载进度 */
+        #loading-text {
+            margin-top: 20px; font-size: 12px; color: #aaa; letter-spacing: 1px;
+        }
     </style>
 </head>
 <body>
 
-    <div id="debug-console">DEBUG MODE STARTED...<br></div>
-
     <div id="lock-screen">
         <div class="lock-title">🎄 FOR QINGQING ❤️</div>
-        <input type="password" id="password-input" class="lock-input" placeholder="输入我们的纪念日">
+        <input type="password" id="password-input" class="lock-input" placeholder="纪念日 (0319)">
         <button class="lock-btn" onclick="checkPassword()">开启惊喜</button>
         <div class="error-msg" id="error-msg"></div>
-        <div style="font-size:10px; color:#333; margin-top:50px;">v44.0 Debug</div>
+        <div id="loading-text"></div>
     </div>
 
     <video id="input_video" autoplay playsinline></video>
@@ -123,7 +127,7 @@
         </div>
         
         <div class="controls">
-            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 导入照片(多选)</button>
+            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 补充照片</button>
             <button class="btn-main" id="btn-folder-upload" onclick="document.getElementById('folder-input').click()">+ 文件夹</button>
             <button class="btn-sub" id="btn-shake" style="display:none;" onclick="requestMotion()">⚡ 摇一摇</button>
             
@@ -131,7 +135,7 @@
             <input type="file" id="folder-input" webkitdirectory directory multiple onchange="handlePhotoUpload(this)">
         </div>
         
-        <div id="status">v44.0 Stable</div>
+        <div id="status">v45.0 Interactive Fix</div>
     </div>
 
     <div id="canvas-container"></div>
@@ -150,46 +154,35 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <script>
-        // --- ERROR LOGGING ---
-        const debugConsole = document.getElementById('debug-console');
-        function logErr(msg) {
-            console.error(msg);
-            // 只有当 URL 里包含 ?debug=true 时才显示控制台，避免影响美观
-            if(window.location.search.includes('debug')) {
-                debugConsole.style.display = 'block';
-                debugConsole.innerHTML += `<div style="color:red;">> ${msg}</div>`;
-            }
-        }
-        window.onerror = function (msg, url, lineNo, columnNo, error) {
-            logErr(`Error: ${msg} at line ${lineNo}`);
-            return false;
-        };
-
-        // --- 0. PRIVACY & LOCK ---
+        // --- 0. PRIVACY CONFIG & LOCK ---
         const CORRECT_PASSWORD = "0319"; 
-        // 确保这个文件夹名和你 GitHub 仓库里的一模一样（区分大小写！）
         const SECRET_FOLDER = "secret_love_hxq"; 
         const TOTAL_PRELOAD_IMAGES = 80;
 
         function checkPassword() {
             const input = document.getElementById('password-input').value;
             if (input === CORRECT_PASSWORD) {
-                const lockScreen = document.getElementById('lock-screen');
-                const uiLayer = document.getElementById('ui-layer');
-                lockScreen.style.opacity = 0;
+                // 开始加载动画
+                document.getElementById('loading-text').innerText = "正在验证并加载资源...";
+                
+                // 延迟一秒解锁，确保逻辑就绪
                 setTimeout(() => {
-                    lockScreen.style.display = 'none';
-                    uiLayer.style.pointerEvents = 'auto';
+                    const lockScreen = document.getElementById('lock-screen');
+                    const uiLayer = document.getElementById('ui-layer');
+                    
+                    lockScreen.style.opacity = 0;
+                    setTimeout(() => lockScreen.style.display = 'none', 800);
+                    
                     uiLayer.style.opacity = 1;
                     
-                    // 尝试加载图片
+                    // 开始加载照片
                     preloadPhotos(); 
                     
-                    // 检查加速度计权限
+                    // 请求摇一摇权限
                     if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
                         document.getElementById('btn-shake').style.display = 'block';
                     }
-                }, 800);
+                }, 500);
             } else {
                 document.getElementById('error-msg').innerText = "密码错误，请重试 ❤️";
             }
@@ -233,11 +226,6 @@
         resetDeck();
 
         // --- 2. THREE.JS SETUP ---
-        if (typeof THREE === 'undefined') {
-            logErr("THREE.js failed to load. Check network.");
-            alert("错误：资源加载失败，请刷新重试或检查网络。");
-        }
-
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x020202, 0.003);
@@ -272,11 +260,7 @@
             composer = new THREE.EffectComposer(renderer);
             composer.addPass(renderScene);
             composer.addPass(bloomPass);
-        } catch(e) {
-            logErr("Bloom failed to init: " + e.message);
-            // Fallback to basic renderer if PostProcessing fails
-            composer = null;
-        }
+        } catch(e) { console.error("Bloom Error", e); }
 
         const mainGroup = new THREE.Group(); scene.add(mainGroup); 
         const staticGroup = new THREE.Group(); scene.add(staticGroup); 
@@ -351,7 +335,6 @@
         }
         const circleTex = getCircleTexture();
 
-        // Particles Generation
         (function createTopTextParticles() {
             const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 256;
             const ctx = canvas.getContext('2d');
@@ -402,7 +385,6 @@
             particles.push({mesh, treePos, scatterPos:getScatterPos(120), type:'dust', originalScale:mesh.scale.clone()});
         }
         
-        // Orbit & BG
         const orbitGeoSys=new THREE.BufferGeometry(); const orbitPosArr=[]; const orbitColArr=[];
         const orbitColors=[new THREE.Color(config.colors.gold), new THREE.Color(config.colors.pink), new THREE.Color(config.colors.blue)];
         for(let i=0; i<config.orbitDustCount; i++) {
@@ -488,9 +470,12 @@
             particles.push(pObj); photoParticles.push(pObj);
         }
 
-        // --- ★★★ SAFER PRELOAD ★★★ ---
+        // --- ★★★ ASYNC PRELOAD WITH PROGRESS ★★★ ---
         function preloadPhotos() {
             const loader = new THREE.TextureLoader();
+            let loadedCount = 0;
+            const statusEl = document.getElementById('status');
+            
             for(let i = 1; i <= TOTAL_PRELOAD_IMAGES; i++) {
                 loader.load(
                     `${SECRET_FOLDER}/${i}.jpg`, 
@@ -504,11 +489,11 @@
                             slot.mesh.material.needsUpdate = true;
                             slot.mesh.material.color.setHex(config.photoBrightness);
                         }
+                        loadedCount++;
+                        if(statusEl) statusEl.innerText = `Loading: ${loadedCount}/${TOTAL_PRELOAD_IMAGES}`;
                     },
                     undefined,
-                    (err) => { 
-                        // Just ignore missing photos, don't crash
-                    }
+                    (err) => { } // Ignore 404
                 );
             }
         }
@@ -612,6 +597,10 @@
         }
         window.addEventListener('devicemotion', handleMotion);
 
+        // --- ★★★ INTERACTION FIX ★★★ ---
+        // Listeners attached to container, which is BELOW UI layer.
+        // We set UI Layer to pointer-events: none so clicks pass through.
+        
         let lastTapTime = 0;
         let initialPinchDist = null;
         let isDragging = false;
@@ -691,6 +680,96 @@
             }
         });
 
+        function onResults(results) {
+            if(state.inputMode !== 'HANDS') return;
+            let rightHand = null, leftHand = null;
+            if (results.multiHandLandmarks) {
+                for (let i = 0; i < results.multiHandLandmarks.length; i++) {
+                    const label = results.multiHandedness[i].label;
+                    if(label === 'Right') rightHand = results.multiHandLandmarks[i];
+                    if(label === 'Left') leftHand = results.multiHandLandmarks[i];
+                }
+            }
+
+            if (rightHand) {
+                const wrist = rightHand[0]; let extended = 0;
+                [8,12,16,20].forEach(i => {
+                    const tip = rightHand[i]; 
+                    if(Math.sqrt(Math.pow(tip.x-wrist.x,2)+Math.pow(tip.y-wrist.y,2)) > 0.15) extended++;
+                });
+                if (extended <= 1) transitionTo('TREE');
+                else if (extended >= 4) transitionTo('SCATTER');
+            }
+
+            if (leftHand) {
+                const wrist = leftHand[0]; const indexTip = leftHand[8]; const thumbTip = leftHand[4];
+                let foldedCount = 0;
+                [12, 16, 20].forEach(i => {
+                    const tip = leftHand[i]; 
+                    if(Math.sqrt(Math.pow(tip.x-leftHand[0].x,2)+Math.pow(tip.y-leftHand[0].y,2)) < 0.15) foldedCount++;
+                });
+                const isFist = foldedCount >= 3; 
+                let extendedCount = 0;
+                [8,12,16,20].forEach(i => {
+                    const tip = leftHand[i]; 
+                    if(Math.sqrt(Math.pow(tip.x-leftHand[0].x,2)+Math.pow(tip.y-leftHand[0].y,2)) > 0.15) extendedCount++;
+                });
+                const isOpen = extendedCount >= 4;
+
+                if (isFist) {
+                    if (!state.isInspecting && !state.isGrabLocked) {
+                        state.isGrabLocked = true; showRandomPhoto(); setTimeout(() => state.isGrabLocked = false, 1500);
+                    }
+                } else if (isOpen) {
+                    if (state.isInspecting && !state.isGrabLocked) {
+                        closePhoto();
+                    }
+                }
+            }
+        }
+
+        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
+        hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+        hands.onResults(onResults);
+
+        const video = document.getElementById('input_video');
+        const cameraUtils = new Camera(video, {
+            onFrame: async () => { await hands.send({image: video}); },
+            width: isMobile ? 360 : 640, height: isMobile ? 240 : 480,
+            facingMode: 'user'
+        });
+        
+        // --- 10. LOOP ---
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            if (state.mode !== 'TREE' && !state.leftHandPinching) mainGroup.rotation.y += 0.001;
+            else if (state.mode === 'TREE') { 
+                if(!isDragging && state.inputMode === 'TOUCH') mainGroup.rotation.y += 0.002;
+            }
+
+            orbitGroup.rotation.y = time * -0.1; orbitGroup.rotation.z = Math.sin(time*0.5) * 0.05;
+            topStar.rotation.y = time * 1.5;
+            
+            heartGroup.children.forEach(h => {
+                const scale = h.userData.baseScale * (1 + Math.sin(time * 3 + h.userData.pulseOffset) * 0.2);
+                h.scale.setScalar(scale);
+            });
+            constellationGroup.children.forEach(c => {
+                 c.position.y += Math.sin(time * c.userData.floatSpeed + c.userData.floatOffset) * 0.05;
+            });
+
+            photoParticles.forEach(p => { p.mesh.lookAt(camera.position); });
+            particles.forEach(p => { 
+                if(p.type === 'dust') p.mesh.scale.multiplyScalar(1 + Math.sin(time * 5 + p.treePos.x)*0.005); 
+            });
+
+            if(composer) composer.render();
+            else renderer.render(scene, camera);
+        }
+
         window.handlePhotoUpload = (input) => {
             if(!input.files.length) return;
             const files = Array.from(input.files).slice(0, 80); 
@@ -728,7 +807,7 @@
                 };
                 reader.readAsDataURL(file);
             });
-            alert("🎉 已导入 " + files.length + " 张照片！\n(已自动优化大小以防闪退)");
+            alert("🎉 已导入 " + files.length + " 张照片！");
         };
 
         window.addEventListener('resize', () => {
@@ -736,36 +815,6 @@
             renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Animation Loop
-        const clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
-            const time = clock.getElapsedTime();
-
-            if (state.mode !== 'TREE' && !state.leftHandPinching) mainGroup.rotation.y += 0.001;
-            else if (state.mode === 'TREE') { 
-                if(!isDragging && state.inputMode === 'TOUCH') mainGroup.rotation.y += 0.002;
-            }
-
-            orbitGroup.rotation.y = time * -0.1; orbitGroup.rotation.z = Math.sin(time*0.5) * 0.05;
-            topStar.rotation.y = time * 1.5;
-            
-            heartGroup.children.forEach(h => {
-                const scale = h.userData.baseScale * (1 + Math.sin(time * 3 + h.userData.pulseOffset) * 0.2);
-                h.scale.setScalar(scale);
-            });
-            constellationGroup.children.forEach(c => {
-                 c.position.y += Math.sin(time * c.userData.floatSpeed + c.userData.floatOffset) * 0.05;
-            });
-
-            photoParticles.forEach(p => { p.mesh.lookAt(camera.position); });
-            particles.forEach(p => { 
-                if(p.type === 'dust') p.mesh.scale.multiplyScalar(1 + Math.sin(time * 5 + p.treePos.x)*0.005); 
-            });
-
-            if(composer) composer.render();
-            else renderer.render(scene, camera);
-        }
         animate();
     </script>
 </body>
