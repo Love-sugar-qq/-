@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Magical Christmas - Compact Tree v38</title>
+    <title>For QingQing Only ❤️</title>
     <style>
         /* 基础设置 */
         body { 
@@ -18,85 +18,79 @@
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;
             display: flex; flex-direction: column; justify-content: space-between; padding: 10px; box-sizing: border-box;
+            /* 默认隐藏UI，解锁后显示 */
+            opacity: 0; transition: opacity 1s; pointer-events: none;
         }
         
-        /* 顶部栏 */
-        .top-bar {
-            display: flex; justify-content: flex-end; align-items: flex-start; pointer-events: auto;
+        /* 密码锁屏层 */
+        #lock-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #FFD700; transition: opacity 0.8s;
         }
+        .lock-title { font-size: 20px; margin-bottom: 20px; letter-spacing: 2px; }
+        .lock-input {
+            padding: 10px; border: 2px solid #FF1493; background: transparent; 
+            color: white; border-radius: 8px; outline: none; text-align: center;
+            font-size: 16px; width: 150px; margin-bottom: 15px;
+        }
+        .lock-btn {
+            background: #FF1493; color: white; border: none; padding: 10px 30px;
+            border-radius: 50px; font-weight: bold; cursor: pointer;
+        }
+        .error-msg { color: red; font-size: 12px; margin-top: 10px; height: 15px; }
 
+        /* UI 元素样式 */
+        .top-bar { display: flex; justify-content: flex-end; align-items: flex-start; pointer-events: auto; }
         .mode-switch {
             background: rgba(255,255,255,0.15); backdrop-filter: blur(5px);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 15px; padding: 3px; display: flex; gap: 3px;
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 15px; padding: 3px; display: flex; gap: 3px;
         }
         .mode-btn {
-            background: transparent; border: none; color: #aaa;
-            padding: 5px 10px; font-size: 10px; font-weight: bold;
+            background: transparent; border: none; color: #aaa; padding: 5px 10px; font-size: 10px; font-weight: bold;
             border-radius: 12px; cursor: pointer; transition: all 0.2s;
         }
-        .mode-btn.active {
-            background: #FF1493; color: white;
-        }
+        .mode-btn.active { background: #FF1493; color: white; }
 
-        /* 左下角微型提示框 */
         #guide {
-            position: absolute; 
-            bottom: 85px; /* 位于按钮上方 */
-            left: 10px;
-            width: 110px; /* 限制宽度 */
-            color: rgba(255,255,255,0.7); 
-            font-size: 10px; /* 极小字体 */
-            line-height: 1.4;
-            background: rgba(0,0,0,0.2); /* 极淡背景 */
-            padding: 8px; 
-            border-radius: 8px;
-            border-left: 2px solid #FFD700;
-            pointer-events: none;
+            position: absolute; bottom: 85px; left: 10px; width: 110px; 
+            color: rgba(255,255,255,0.7); font-size: 10px; line-height: 1.4;
+            background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;
+            border-left: 2px solid #FFD700; pointer-events: none;
         }
         .key { color: #FFD700; font-weight: bold; }
         .guide-row { margin-bottom: 2px; }
         
-        /* 底部控制栏 */
         .controls { 
             pointer-events: auto; text-align: center; margin-bottom: 15px; 
             display: flex; justify-content: center; gap: 8px; 
         }
         .btn-main {
             background: linear-gradient(135deg, #FF1493, #FFD700);
-            border: none; color: #fff;
-            padding: 10px 15px; 
+            border: none; color: #fff; padding: 10px 15px; 
             text-transform: uppercase; font-size: 11px; border-radius: 50px;
-            box-shadow: 0 4px 10px rgba(255, 20, 147, 0.4); font-weight: bold;
-            white-space: nowrap;
+            box-shadow: 0 4px 10px rgba(255, 20, 147, 0.4); font-weight: bold; white-space: nowrap;
         }
         .btn-sub {
             background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
-            color: #ccc; padding: 10px 12px; font-size: 11px; border-radius: 50px;
-            backdrop-filter: blur(5px);
+            color: #ccc; padding: 10px 12px; font-size: 11px; border-radius: 50px; backdrop-filter: blur(5px);
         }
-        #file-input, #folder-input { display: none; }
-
-        #status { position: absolute; bottom: 5px; left: 10px; color: rgba(255,255,255,0.2); font-size: 9px; }
         
-        #loader {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #020202;
-            display: flex; justify-content: center; align-items: center; z-index: 20; color: #FFD700;
-            flex-direction: column; transition: opacity 1.2s;
-        }
-        .spinner {
-            width: 30px; height: 30px; border: 2px solid rgba(255, 215, 0, 0.2); border-top: 2px solid #FFD700; border-radius: 50%;
-            animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite; margin-bottom: 10px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #btn-folder-upload { display: none; }
+        @media (min-width: 768px) { #btn-folder-upload { display: inline-block; } }
+        #file-input, #folder-input { display: none; }
+        #status { position: absolute; bottom: 5px; left: 10px; color: rgba(255,255,255,0.2); font-size: 9px; }
         #input_video { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="loader">
-        <div class="spinner"></div>
-        <div style="font-size: 10px; letter-spacing: 2px; opacity: 0.8;">TIGHTENING...</div>
+    <div id="lock-screen">
+        <div class="lock-title">🎄 FOR QINGQING ❤️</div>
+        <input type="password" id="password-input" class="lock-input" placeholder="输入我们的纪念日">
+        <button class="lock-btn" onclick="checkPassword()">开启惊喜</button>
+        <div class="error-msg" id="error-msg"></div>
     </div>
 
     <video id="input_video" autoplay playsinline></video>
@@ -118,14 +112,15 @@
         </div>
         
         <div class="controls">
-            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 照片</button>
-            <button class="btn-main" onclick="document.getElementById('folder-input').click()">+ 文件夹</button>
+            <button class="btn-main" onclick="document.getElementById('file-input').click()">+ 补充照片</button>
+            <button class="btn-main" id="btn-folder-upload" onclick="document.getElementById('folder-input').click()">+ 文件夹</button>
             <button class="btn-sub" id="btn-shake" style="display:none;" onclick="requestMotion()">⚡ 摇一摇</button>
+            
             <input type="file" id="file-input" accept="image/*" multiple onchange="handlePhotoUpload(this)">
             <input type="file" id="folder-input" webkitdirectory directory multiple onchange="handlePhotoUpload(this)">
         </div>
         
-        <div id="status">v38.0 Compact & Dense</div>
+        <div id="status">v43.0 Privacy Locked</div>
     </div>
 
     <div id="canvas-container"></div>
@@ -144,21 +139,39 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <script>
-        // --- 0. FAILSAFE ---
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const loader = document.getElementById('loader');
-                if(loader && loader.style.display !== 'none') {
-                    loader.style.opacity = 0; setTimeout(() => loader.style.display = 'none', 500);
-                }
-            }, 1500); 
-            
-            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                document.getElementById('btn-shake').style.display = 'block';
-            }
-        });
+        // --- 0. PRIVACY CONFIG & LOCK ---
+        
+        // ★★★ 请在这里设置你的密码和乱码文件夹名 ★★★
+        const CORRECT_PASSWORD = "0319";  // 设置一个只有你们知道的数字
+        const SECRET_FOLDER = "secret_love_hxq"; // 上传到GitHub的文件夹名字，不要用 'photos'
+        const TOTAL_PRELOAD_IMAGES = 80;
 
-        // --- 1. CONFIGURATION (COMPACT & DENSE) ---
+        function checkPassword() {
+            const input = document.getElementById('password-input').value;
+            if (input === CORRECT_PASSWORD) {
+                // Unlock
+                const lockScreen = document.getElementById('lock-screen');
+                const uiLayer = document.getElementById('ui-layer');
+                
+                lockScreen.style.opacity = 0;
+                setTimeout(() => {
+                    lockScreen.style.display = 'none';
+                    uiLayer.style.pointerEvents = 'auto'; // Enable UI
+                    uiLayer.style.opacity = 1;
+                    
+                    // Start loading secret photos ONLY after unlock
+                    preloadPhotos(); 
+                    
+                    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                        document.getElementById('btn-shake').style.display = 'block';
+                    }
+                }, 800);
+            } else {
+                document.getElementById('error-msg').innerText = "密码错误，请重试 ❤️";
+            }
+        }
+
+        // --- 1. CONFIGURATION ---
         const isMobile = window.innerWidth < 768; 
 
         const config = {
@@ -168,7 +181,7 @@
             orbitDustCount: isMobile ? 500 : 1200, 
             bgDustCount: isMobile ? 600 : 1500, 
             heartCount: isMobile ? 50 : 100,
-            photoCount: 60, 
+            photoCount: 80, 
             photoBrightness: 0xdddddd, 
             hudPhotoBrightness: 0x888888, 
             topText: "晴晴圣诞节快乐！",
@@ -178,20 +191,12 @@
                 pink: 0xFF88C2, purple: 0xB090FF, blue: 0x33CCFF, yellow: 0xFFFF66,
                 libraGold: 0xFFE55C, aquaBlue: 0x33CCFF
             },
-            // 【调整重点】: 降低高度，大幅减小半径，实现"密集"效果
-            treeHeight: 80, // Slightly shorter
-            treeRadius: isMobile ? 25 : 35, // Significantly narrower (was 40/50)
-            scatterRadius: 120
+            treeHeight: 80, treeRadius: isMobile ? 25 : 35, scatterRadius: 120
         };
 
         const state = {
-            mode: 'TREE', 
-            inputMode: 'TOUCH', 
-            isInspecting: false,
-            unviewedPhotos: [], 
-            isGrabLocked: false,
-            album: [], 
-            uploadIndex: 0
+            mode: 'TREE', inputMode: 'TOUCH', isInspecting: false,
+            unviewedPhotos: [], isGrabLocked: false, album: [], uploadIndex: 0
         };
 
         function resetDeck() {
@@ -208,9 +213,8 @@
         const scene = new THREE.Scene();
         scene.fog = new THREE.FogExp2(0x020202, 0.003);
 
-        // Adjust Camera to fit the tighter tree
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 10, isMobile ? 140 : 120); // Closer camera
+        camera.position.set(0, 10, isMobile ? 140 : 120);
         camera.lookAt(0,0,0);
         scene.add(camera);
 
@@ -237,7 +241,6 @@
         composer.addPass(renderScene);
         composer.addPass(bloomPass);
 
-        // --- 3. GROUPS ---
         const mainGroup = new THREE.Group(); scene.add(mainGroup); 
         const staticGroup = new THREE.Group(); scene.add(staticGroup); 
         const orbitGroup = new THREE.Group(); scene.add(orbitGroup);
@@ -247,7 +250,6 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // --- 4. HUD SYSTEM ---
         const hudGroup = new THREE.Group();
         camera.add(hudGroup);
         const hudGeometry = new THREE.PlaneGeometry(12, 16); 
@@ -264,7 +266,6 @@
         const borderMesh = new THREE.Mesh(borderGeo, borderMat);
         borderMesh.position.set(0, 0, -15.1); borderMesh.renderOrder = 9998; hudGroup.add(borderMesh);
 
-        // --- 5. ASSETS ---
         const geoSphere = new THREE.IcosahedronGeometry(0.8, 1);
         const geoBox = new THREE.BoxGeometry(1.2, 1.2, 1.2);
         const geoTorus = new THREE.TorusGeometry(0.7, 0.25, 12, 24);
@@ -278,29 +279,18 @@
         
         const particles = [];
         const photoParticles = []; 
-        
-        // --- CORE LOGIC: COMPACT TREE ---
         const goldenAngle = Math.PI * (3 - Math.sqrt(5));
 
         function getTreePos(i, total, radiusMod = 1, heightMod = 1, hOffset = 0) {
             const h = config.treeHeight * heightMod;
             const t = i / total;
             const y = h * (t - 0.5) + hOffset;
-
-            // Tighter Curve
             const progressFromTop = 1 - t;
-            let rProfile = Math.pow(progressFromTop, 0.85) * config.treeRadius * radiusMod; // 0.85 power for tighter top
-            rProfile += 0.5; // Min radius
-
+            let rProfile = Math.pow(progressFromTop, 0.85) * config.treeRadius * radiusMod; 
+            rProfile += 0.5; 
             const angle = i * goldenAngle;
-            // Less random jitter for more uniform look
             const jitterRadius = rProfile + (Math.random() - 0.5) * 1.5; 
-
-            return new THREE.Vector3(
-                Math.cos(angle) * jitterRadius,
-                y,
-                Math.sin(angle) * jitterRadius
-            );
+            return new THREE.Vector3(Math.cos(angle) * jitterRadius, y, Math.sin(angle) * jitterRadius);
         }
 
         function getScatterPos(radius = config.scatterRadius) {
@@ -334,7 +324,6 @@
         }
         const circleTex = getCircleTexture();
 
-        // --- 6. POPULATE SCENE ---
         (function createTopTextParticles() {
             const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 256;
             const ctx = canvas.getContext('2d');
@@ -371,7 +360,6 @@
             else if(r>0.4) mesh=new THREE.Mesh(geoSphere, matGreenD);
             else mesh=new THREE.Mesh(geoSphere, matGreenL);
             const treePos=getTreePos(i, config.decoCount);
-            // Tight packing
             treePos.x+=(Math.random()-0.5)*1.0; treePos.z+=(Math.random()-0.5)*1.0;
             mesh.position.copy(treePos); mesh.scale.setScalar(Math.random()*0.7+0.6);
             mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, 0);
@@ -403,7 +391,7 @@
         const bgGeo=new THREE.BufferGeometry(); const bgPos=[]; const bgCols=[];
         const bgBaseCols=[new THREE.Color(config.colors.pink), new THREE.Color(config.colors.purple), new THREE.Color(config.colors.blue)];
         for(let i=0; i<config.bgDustCount; i++) {
-            const p=getDeepBackgroundPos(5); bgPos.push(p.x, p.y, p.z);
+            const p=getDeepBackgroundPos(5); 
             const c=bgBaseCols[Math.floor(Math.random()*bgBaseCols.length)];
             bgCols.push(c.r*1.3, c.g*1.3, c.b*1.3);
         }
@@ -414,7 +402,6 @@
         const topStar=new THREE.Mesh(new THREE.OctahedronGeometry(4, 0), new THREE.MeshStandardMaterial({color:0xFFFDD0, emissive:0xAAAA00, metalness:1.0, roughness:0.1}));
         topStar.position.set(0, config.treeHeight/2+5, 0); mainGroup.add(topStar); topStar.add(new THREE.PointLight(0xFFD700, 3, 100));
 
-        // Texts & Shapes
         function createTextTexture(text, color) {
             const canvas=document.createElement('canvas'); canvas.width=512; canvas.height=128;
             const ctx=canvas.getContext('2d');
@@ -460,7 +447,6 @@
         const aquaConns=[[0,1], [0,2], [1,3], [2,3], [3,4], [3,5], [4,6], [6,7], [7,8], [8,9]];
         createConstellation(aquaStars, aquaConns, config.colors.aquaBlue, getDeepBackgroundPos(60));
 
-        // --- PHOTOS ---
         function createPlaceholderTexture(index) {
             const cvs=document.createElement('canvas'); cvs.width=300; cvs.height=400; const cx=cvs.getContext('2d');
             const hue=(index*360/config.photoCount)%360; const grad=cx.createLinearGradient(0,0,300,400);
@@ -480,12 +466,35 @@
             const indexInTree=Math.floor((i/config.photoCount)*config.decoCount);
             const treePos=getTreePos(indexInTree, config.decoCount, 1.4, 0.9);
             mesh.position.copy(treePos); mainGroup.add(mesh);
-            mesh.userData = { id: i }; // Store ID for Raycasting
+            mesh.userData = { id: i }; 
             const pObj={mesh, treePos, scatterPos:getScatterPos(), isPhoto:true, originalScale:new THREE.Vector3(1,1,1), id:i};
             particles.push(pObj); photoParticles.push(pObj);
         }
 
-        // --- 7. HUD & LOGIC ---
+        // --- ★★★ AUTO LOAD FROM SECRET FOLDER ★★★ ---
+        function preloadPhotos() {
+            const loader = new THREE.TextureLoader();
+            // Use the SECRET_FOLDER variable here
+            for(let i = 1; i <= TOTAL_PRELOAD_IMAGES; i++) {
+                loader.load(
+                    `${SECRET_FOLDER}/${i}.jpg`, 
+                    (tex) => {
+                        tex.encoding = THREE.sRGBEncoding;
+                        const slotIndex = (i - 1) % config.photoCount;
+                        state.album[slotIndex] = tex;
+                        const slot = photoParticles[slotIndex];
+                        if(slot && slot.mesh) {
+                            slot.mesh.material.map = tex;
+                            slot.mesh.material.needsUpdate = true;
+                            slot.mesh.material.color.setHex(config.photoBrightness);
+                        }
+                    },
+                    undefined,
+                    (err) => { }
+                );
+            }
+        }
+
         function transitionTo(newState) {
             if(state.mode === newState) return;
             state.mode = newState;
@@ -542,8 +551,6 @@
             });
         }
 
-        // --- 8. INTERACTIONS (TOUCH & SHAKE) ---
-        
         window.setMode = (mode) => {
             state.inputMode = mode;
             const btns = document.querySelectorAll('.mode-btn');
@@ -587,7 +594,6 @@
         }
         window.addEventListener('devicemotion', handleMotion);
 
-        // Touch Gestures
         let lastTapTime = 0;
         let initialPinchDist = null;
         let isDragging = false;
@@ -667,116 +673,44 @@
             }
         });
 
-        // --- 9. MEDIAPIPE ---
-        function onResults(results) {
-            if(state.inputMode !== 'HANDS') return;
-            let rightHand = null, leftHand = null;
-            if (results.multiHandLandmarks) {
-                for (let i = 0; i < results.multiHandLandmarks.length; i++) {
-                    const label = results.multiHandedness[i].label;
-                    if(label === 'Right') rightHand = results.multiHandLandmarks[i];
-                    if(label === 'Left') leftHand = results.multiHandLandmarks[i];
-                }
-            }
-
-            if (rightHand) {
-                const wrist = rightHand[0]; let extended = 0;
-                [8,12,16,20].forEach(i => {
-                    const tip = rightHand[i]; 
-                    if(Math.sqrt(Math.pow(tip.x-wrist.x,2)+Math.pow(tip.y-wrist.y,2)) > 0.15) extended++;
-                });
-                if (extended <= 1) transitionTo('TREE');
-                else if (extended >= 4) transitionTo('SCATTER');
-            }
-
-            if (leftHand) {
-                const wrist = leftHand[0]; const indexTip = leftHand[8]; const thumbTip = leftHand[4];
-                let foldedCount = 0;
-                [12, 16, 20].forEach(i => {
-                    const tip = leftHand[i]; 
-                    if(Math.sqrt(Math.pow(tip.x-leftHand[0].x,2)+Math.pow(tip.y-leftHand[0].y,2)) < 0.15) foldedCount++;
-                });
-                const isFist = foldedCount >= 3; 
-                let extendedCount = 0;
-                [8,12,16,20].forEach(i => {
-                    const tip = leftHand[i]; 
-                    if(Math.sqrt(Math.pow(tip.x-leftHand[0].x,2)+Math.pow(tip.y-leftHand[0].y,2)) > 0.15) extendedCount++;
-                });
-                const isOpen = extendedCount >= 4;
-
-                if (isFist) {
-                    if (!state.isInspecting && !state.isGrabLocked) {
-                        state.isGrabLocked = true; showRandomPhoto(); setTimeout(() => state.isGrabLocked = false, 1500);
-                    }
-                } else if (isOpen) {
-                    if (state.isInspecting && !state.isGrabLocked) {
-                        closePhoto();
-                    }
-                }
-            }
-        }
-
-        const hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-        hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
-        hands.onResults(onResults);
-
-        const video = document.getElementById('input_video');
-        const cameraUtils = new Camera(video, {
-            onFrame: async () => { await hands.send({image: video}); },
-            width: isMobile ? 360 : 640, height: isMobile ? 240 : 480,
-            facingMode: 'user'
-        });
-        
-        // --- 10. LOOP ---
-        const clock = new THREE.Clock();
-        function animate() {
-            requestAnimationFrame(animate);
-            const time = clock.getElapsedTime();
-
-            if (state.mode !== 'TREE' && !state.leftHandPinching) mainGroup.rotation.y += 0.001;
-            else if (state.mode === 'TREE') { 
-                if(!isDragging && state.inputMode === 'TOUCH') mainGroup.rotation.y += 0.002;
-            }
-
-            orbitGroup.rotation.y = time * -0.1; orbitGroup.rotation.z = Math.sin(time*0.5) * 0.05;
-            topStar.rotation.y = time * 1.5;
-            
-            heartGroup.children.forEach(h => {
-                const scale = h.userData.baseScale * (1 + Math.sin(time * 3 + h.userData.pulseOffset) * 0.2);
-                h.scale.setScalar(scale);
-            });
-            constellationGroup.children.forEach(c => {
-                 c.position.y += Math.sin(time * c.userData.floatSpeed + c.userData.floatOffset) * 0.05;
-            });
-
-            photoParticles.forEach(p => { p.mesh.lookAt(camera.position); });
-            particles.forEach(p => { 
-                if(p.type === 'dust') p.mesh.scale.multiplyScalar(1 + Math.sin(time * 5 + p.treePos.x)*0.005); 
-            });
-
-            composer.render();
-        }
-
         window.handlePhotoUpload = (input) => {
             if(!input.files.length) return;
-            Array.from(input.files).forEach(file => {
+            const files = Array.from(input.files).slice(0, 80); 
+            
+            files.forEach(file => {
                 if (!file.type.startsWith('image/')) return;
+
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const tex = new THREE.TextureLoader().load(e.target.result);
-                    tex.encoding = THREE.sRGBEncoding;
-                    state.album[state.uploadIndex % config.photoCount] = tex;
-                    const slot = photoParticles[state.uploadIndex % config.photoCount];
-                    if(slot && slot.mesh) {
-                        slot.mesh.material.map = tex; 
-                        slot.mesh.material.needsUpdate = true;
-                        slot.mesh.material.color.setHex(config.photoBrightness); 
-                    }
-                    state.uploadIndex++;
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const maxDim = 512;
+                        let w = img.width, h = img.height;
+                        if (w > h) { if (w > maxDim) { h *= maxDim / w; w = maxDim; } }
+                        else { if (h > maxDim) { w *= maxDim / h; h = maxDim; } }
+                        
+                        canvas.width = w; canvas.height = h;
+                        ctx.drawImage(img, 0, 0, w, h);
+                        
+                        const tex = new THREE.CanvasTexture(canvas);
+                        tex.encoding = THREE.sRGBEncoding;
+                        
+                        state.album[state.uploadIndex % config.photoCount] = tex;
+                        const slot = photoParticles[state.uploadIndex % config.photoCount];
+                        if(slot && slot.mesh) {
+                            slot.mesh.material.map = tex; 
+                            slot.mesh.material.needsUpdate = true;
+                            slot.mesh.material.color.setHex(config.photoBrightness); 
+                        }
+                        state.uploadIndex++;
+                    };
+                    img.src = e.target.result;
                 };
                 reader.readAsDataURL(file);
             });
-            alert("🎉 已导入 " + input.files.length + " 张照片！");
+            alert("🎉 已导入 " + files.length + " 张照片！\n(已自动优化大小以防闪退)");
         };
 
         window.addEventListener('resize', () => {
